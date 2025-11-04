@@ -1,0 +1,222 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Get the user document for the authenticated user
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user exists in users collection
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Check if user status is ACTIVE
+    function isActiveUser() {
+      return isSignedIn() && userExists() && getUserData().status == 'active';
+    }
+
+    // Get user's role
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    // Role hierarchy: view=1, edit=2, admin=3, super_admin=4
+    function getRoleLevel(role) {
+      return role == 'super_admin' ? 4 :
+             role == 'admin' ? 3 :
+             role == 'edit' ? 2 :
+             role == 'view' ? 1 : 0;
+    }
+
+    // Check if user has minimum required role level
+    function hasMinimumRole(requiredRole) {
+      return isActiveUser() && getRoleLevel(getUserRole()) >= getRoleLevel(requiredRole);
+    }
+
+    // Check if user can read (VIEW role or higher)
+    function canRead() {
+      return hasMinimumRole('view');
+    }
+
+    // Check if user can write (EDIT role or higher)
+    function canWrite() {
+      return hasMinimumRole('edit');
+    }
+
+    // Check if user is ADMIN or higher
+    function isAdmin() {
+      return hasMinimumRole('admin');
+    }
+
+    // Check if user is SUPER_ADMIN
+    function isSuperAdmin() {
+      return isActiveUser() && getUserRole() == 'super_admin';
+    }
+
+    // Check if role change is valid (target user must have lower role than current user)
+    function canManageUserRole(targetRole) {
+      return getRoleLevel(getUserRole()) > getRoleLevel(targetRole);
+    }
+
+
+    // ============================================
+    // MEMBERS COLLECTION
+    // ============================================
+
+    match /members/{memberId} {
+      // Anyone with VIEW role can read members
+      allow read: if canRead();
+
+      // EDIT role or higher can create members
+      allow create: if canWrite() &&
+                      isValidMemberData(request.resource.data) &&
+                      hasRequiredMemberFields(request.resource.data);
+
+      // EDIT role or higher can update members
+      allow update: if canWrite() &&
+                      isValidMemberData(request.resource.data);
+
+      // EDIT role or higher can delete members
+      allow delete: if canWrite();
+
+      // Validate member data structure
+      function isValidMemberData(data) {
+        return data.fullName is string && data.fullName.size() > 0 &&
+               data.email is string &&
+               data.phone is string &&
+               data.address is string &&
+               data.dateOfBirth is string &&
+               data.golfAustraliaId is string &&
+               data.membershipCategory is string && data.membershipCategory.size() > 0 &&
+               data.accountBalance is number &&
+               data.status in ['active', 'inactive'] &&
+               data.dateJoined is string &&
+               data.emergencyContact is string;
+      }
+
+      // Validate timestamps (allows serverTimestamp() sentinel values)
+      function hasValidTimestamps(data) {
+        return (data.createdAt is timestamp || !('createdAt' in data.keys())) &&
+               (data.updatedAt is timestamp || !('updatedAt' in data.keys()));
+      }
+
+      function hasRequiredMemberFields(data) {
+        return data.keys().hasAll(['fullName', 'email', 'phone', 'address',
+                                   'dateOfBirth', 'golfAustraliaId', 'membershipCategory',
+                                   'accountBalance', 'status', 'dateJoined',
+                                   'emergencyContact', 'createdAt', 'updatedAt']);
+      }
+    }
+
+
+    // ============================================
+    // PAYMENTS COLLECTION
+    // ============================================
+
+    match /payments/{paymentId} {
+      // Anyone with VIEW role can read payments
+      allow read: if canRead();
+
+      // EDIT role or higher can create payments
+      allow create: if canWrite() &&
+                      isValidPaymentData(request.resource.data) &&
+                      hasRequiredPaymentFields(request.resource.data) &&
+                      request.resource.data.recordedBy == request.auth.uid;
+
+      // EDIT role or higher can update payments
+      // Can only update if they recorded it, or if they're ADMIN+
+      allow update: if canWrite() &&
+                      isValidPaymentData(request.resource.data) &&
+                      (resource.data.recordedBy == request.auth.uid || isAdmin());
+
+      // EDIT role or higher can delete payments
+      allow delete: if canWrite();
+
+      // Validate payment data structure
+      function isValidPaymentData(data) {
+        return data.memberId is string && data.memberId.size() > 0 &&
+               data.memberName is string && data.memberName.size() > 0 &&
+               data.amount is number && data.amount > 0 &&
+               data.paymentDate is string &&
+               data.paymentMethod in ['bank_transfer', 'cash'] &&
+               data.reference is string &&
+               data.notes is string &&
+               data.receiptNumber is string && data.receiptNumber.size() > 0 &&
+               data.recordedBy is string && data.recordedBy.size() > 0;
+      }
+
+      function hasRequiredPaymentFields(data) {
+        return data.keys().hasAll(['memberId', 'memberName', 'amount', 'paymentDate',
+                                   'paymentMethod', 'reference', 'notes', 'receiptNumber',
+                                   'recordedBy', 'createdAt', 'updatedAt']);
+      }
+    }
+
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+
+    match /users/{userId} {
+      // Users can read their own document
+      // ADMIN+ can read all user documents
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Only allow creation during user registration
+      // New users can only create with 'pending' status and 'view' role
+      allow create: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.role == 'view' &&
+                      isValidUserData(request.resource.data) &&
+                      hasRequiredUserFields(request.resource.data);
+
+      // ADMIN can update user status and roles
+      // SUPER_ADMIN can update anyone (including other admins)
+      // ADMIN cannot update SUPER_ADMIN users
+      allow update: if isAdmin() &&
+                      isValidUserData(request.resource.data) &&
+                      // SUPER_ADMIN can update anyone
+                      (isSuperAdmin() ||
+                       // ADMIN can only update users with lower roles than their own
+                       (canManageUserRole(resource.data.role) &&
+                        canManageUserRole(request.resource.data.role)));
+
+      // Only SUPER_ADMIN can delete users (hard delete)
+      allow delete: if isSuperAdmin();
+
+      // Validate user data structure
+      function isValidUserData(data) {
+        return data.email is string && data.email.size() > 0 &&
+               data.role in ['view', 'edit', 'admin', 'super_admin'] &&
+               data.status in ['pending', 'active', 'inactive'];
+      }
+
+      function hasRequiredUserFields(data) {
+        return data.keys().hasAll(['email', 'role', 'status', 'createdAt', 'updatedAt']);
+      }
+    }
+
+
+    // ============================================
+    // DENY ALL OTHER COLLECTIONS
+    // ============================================
+
+    // Explicitly deny access to any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,407 @@
+# GOLF CLUB MEMBERSHIP MANAGEMENT SYSTEM
+## Product Requirements Document (PRD)
+### Version 1.0 - Priority Launch by February 2025
+
+---
+
+## 1. EXECUTIVE SUMMARY
+
+### Product Vision
+A simple, secure web-based system to manage 200 golf club members, their membership fees, and payment tracking for the Tea Tree Golf Club.
+
+### Key Objectives
+- Replace manual tracking with a centralized digital system
+- Automate fee calculations while maintaining manual control over member status
+- Provide clear visibility of payment status and outstanding fees
+- Enable easy member data export for integration with other systems
+
+### Users
+- **Administrator** - Full system access
+- **Treasurer** - Full system access
+- Both users have identical permissions (view, add, edit, delete all data)
+
+---
+
+## 2. MEMBER MANAGEMENT
+
+### 2.1 Member Information
+
+**Required Fields:**
+- Full name (searchable)
+- Email address (searchable, unique identifier for non-golf members)
+- Phone number
+- Address
+- Date of birth (used for automatic category calculation)
+- Emergency contact
+- Date joined the club
+- Golf Australia ID (searchable, unique identifier for playing members)
+  - Optional for social/non-playing members
+- Membership category (auto-calculated based on age)
+- Membership status (Active/Inactive - manually controlled)
+- Account balance (system-calculated)
+
+**System-Generated Fields:**
+- Unique ID (Firebase document ID - background only, not visible to users)
+- Created date/time
+- Last updated date/time
+
+### 2.2 Membership Categories & 2025 Fees
+
+| Category | Age Criteria | Playing Rights | Annual Fee | Joining Fee |
+|----------|-------------|----------------|------------|-------------|
+| Junior 10-12 years | Age 10-12 | 7 days | $50 | $0 |
+| Junior 13-15 years | Age 13-15 | 7 days | $120 | $0 |
+| Junior 16-18 years | Age 16-18 | 7 days | $180 | $0 |
+| Colts | Age 19-23 | 7 days | $300 | $50* |
+| Full Membership | Age 24-64 | 7 days | $480 | $25 |
+| Senior Full Membership | Age 65-74 | 7 days | $435 | $25 |
+| Life & Honorary Members | Age 75+ | 7 days | $75 | $0 |
+| Non-playing/Social | Any age | None | $40 | $25 |
+
+*Colts joining fee only applies August-December
+
+### 2.3 Age-Based Category Assignment
+- System automatically determines correct category based on member's age
+- Category change takes effect at next annual fee application (February)
+- Manual override available for special cases (Life members, Social members)
+
+### 2.4 Member Functions
+- **Add New Member**: Form with all fields, auto-calculate initial fees
+- **Edit Member**: Update any information except system-generated fields
+- **View Member Profile**: Full details plus payment history
+- **Search Members**: By name (primary), Golf Australia ID, or email
+- **Filter Members**: By category, status, payment status
+- **Bulk Export**: Download member list as CSV for external systems
+
+---
+
+## 3. FINANCIAL MANAGEMENT
+
+### 3.1 Account Balance Logic
+```
+Starting Balance: $0
+
+When fees applied:
+  Account Balance = Current Balance - Fee Amount
+  (Negative balance = member owes money)
+
+When payment received:
+  Account Balance = Current Balance + Payment Amount
+
+Balance Status:
+  Positive = Credit/overpayment
+  Zero = Fully paid
+  Negative = Outstanding amount owed
+```
+
+### 3.2 New Member Joining Fees
+
+**Joining Fee Structure:**
+- Standard joining fee: $25 (adjustable in settings)
+- Juniors 10-18: No joining fee
+- Colts (Aug-Dec only): $50
+- Life/Honorary: No joining fee
+
+**Pro-Rata Subscription Schedule (August 2024 to February 2025):**
+
+| Month | Calculation | Example (Full Member) |
+|-------|------------|----------------------|
+| August | (8 months/12) × Annual + $25 | $325 + $25 = $350 |
+| September | (7 months/12) × Annual + $25 | $300 + $25 = $325 |
+| October | (6 months/12) × Annual + $25 | $275 + $25 = $300 |
+| November | (5 months/12) × Annual + $25 | $225 + $25 = $250 |
+| December | (4 months/12) × Annual + $25 | $195 + $25 = $220 |
+| January/February | Joining fee only | $100 (no 2024/2025 subscription) |
+
+**New Member Process:**
+1. Enter member details
+2. System auto-calculates: joining fee + pro-rata subscription
+3. Display calculated amount with option to override
+4. Add total to member's account balance
+5. Member pays (record as separate payment transaction)
+
+### 3.3 Annual Fee Application (February)
+
+**Process:**
+1. Administrator initiates "Apply Annual Fees" for specified year
+2. System identifies all Active members
+3. For each member:
+   - Determines correct category based on current age
+   - Looks up corresponding annual fee
+   - Adds fee to account balance
+   - Records transaction in fee charges log
+4. Display summary: members charged, total fees applied
+5. Prevent duplicate application for same year
+
+### 3.4 Payment Recording
+
+**Payment Information:**
+- Member selection (search by name)
+- Payment date
+- Amount
+- Payment method (Bank Transfer or Cash)
+- Reference/notes field (for bank references, special notes)
+- System-tracked: Who recorded the payment (Admin or Treasurer)
+- Auto-generated receipt number (format: R2025-001)
+
+**Payment Patterns Supported:**
+- Full annual payment (most common)
+- Partial payments
+- Regular installments
+- Overpayments (creating credit balance)
+
+**Error Correction:**
+- Ability to edit payment records to fix mistakes
+- Audit trail maintains record of who made changes
+
+---
+
+## 4. REPORTS & OUTPUTS
+
+### 4.1 Outstanding Payments Report
+- **Purpose**: Identify members who owe money
+- **Filters**: Active members with positive account balance
+- **Display**: Member name, category, amount owed, last payment date
+- **Sort**: By amount owed (highest first) or name
+- **Action**: Manual status update option
+
+### 4.2 Financial Summary Reports
+
+**Annual Fees Charged Report:**
+- Total fees applied by year
+- Breakdown by membership category
+- Count of members in each category
+
+**Payments Received Report:**
+- Total payments collected by year
+- Payment method breakdown
+- Monthly collection trends
+
+**Outstanding Balance Report:**
+- Total outstanding across all active members
+- Aging analysis (30, 60, 90+ days)
+- Members with credit balances
+
+### 4.3 Member Reports
+
+**Member List Export (CSV):**
+- All member fields (except system IDs)
+- Current balance
+- Membership category
+- Status
+- For integration with Golf Australia, competition systems
+
+**AGM Summary Report:**
+- Total member count
+- Breakdown by category
+- Financial year summary:
+  - Fees charged
+  - Fees collected  
+  - Outstanding balance
+- Year-over-year comparison
+- Member growth/decline trends
+
+### 4.4 Dashboard Overview
+- **Quick Stats**: Total members, active members, total outstanding
+- **Category Breakdown**: Visual chart of members by category
+- **Recent Activity**: Last 10 payments received
+- **Alerts**: Members with large outstanding balances (>$200)
+
+---
+
+## 5. SECURITY & ACCESS
+
+### 5.1 Authentication
+- Email/password login
+- Two authorized users only (Administrator, Treasurer)
+- Secure password requirements enforced
+- Session timeout after inactivity
+
+### 5.2 Data Protection
+- All data encrypted in transit (HTTPS)
+- Firebase security rules restrict access to authenticated admins only
+- No member self-service access
+- Regular automated backups
+
+### 5.3 Audit Trail
+- Track who created/modified each record
+- Timestamp all changes
+- Payment entry tracking (who recorded each payment)
+
+---
+
+## 6. TECHNICAL ARCHITECTURE
+
+### 6.1 Technology Stack
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth
+- **Hosting**: Firebase Hosting
+- **Application**: Web-based (no mobile app required)
+- **Browser Support**: Chrome, Firefox, Safari, Edge (current versions)
+
+### 6.2 Data Collections
+
+**Primary Collections:**
+- `members` - Member records
+- `payments` - Payment transactions
+- `membershipCategories` - Fee structures (editable)
+- `feeCharges` - Annual fee application log
+- `users` - Admin user accounts
+- `systemSettings` - Configuration (joining fees, etc.)
+
+### 6.3 Performance Requirements
+- Support 200+ members without performance degradation
+- Search results return within 2 seconds
+- Concurrent access for 2 admin users
+- Export 200 member CSV within 5 seconds
+
+---
+
+## 7. IMPLEMENTATION PRIORITIES
+
+### Phase 1: Core Functionality (Must Have - Before February)
+1. **Member Management**
+   - Add/edit/view members
+   - Search and filter
+   - Status management (Active/Inactive)
+
+2. **Payment System**
+   - Record payments
+   - Track account balances
+   - Payment history per member
+
+3. **Annual Fee Application**
+   - Apply February fees to all active members
+   - Automatic category/age calculation
+
+4. **Essential Reports**
+   - Outstanding payments list
+   - Member CSV export
+   - Basic financial summary
+
+### Phase 2: Nice to Have (Post-February)
+- Enhanced reporting and graphs
+- Bulk payment entry
+- Email integration for receipts
+- Advanced search filters
+- Payment reminder scheduling
+
+---
+
+## 8. USER INTERFACE REQUIREMENTS
+
+### Design Principles
+- Simple, clean interface (non-technical users)
+- Clear navigation with obvious actions
+- Responsive design for desktop/tablet use
+- Minimal clicks to complete common tasks
+
+### Key Screens
+1. **Dashboard** - Overview and quick actions
+2. **Members List** - Searchable table with filters
+3. **Member Profile** - Full details and payment history
+4. **Add/Edit Member** - Simple form with validation
+5. **Record Payment** - Quick payment entry
+6. **Reports** - Easy report selection and export
+7. **Settings** - Update fees and system configuration
+
+### Critical User Flows
+- **Add new member**: Maximum 2 screens
+- **Record payment**: Maximum 3 clicks from dashboard
+- **Check unpaid members**: One click from dashboard
+- **Export member data**: Two clicks maximum
+
+---
+
+## 9. SETTINGS & CONFIGURATION
+
+### Editable System Settings
+- Joining fees by member type
+- Membership category fees (annual update)
+- Club name and details
+- Receipt number format
+- Financial year start date
+
+### Business Rules Configuration
+- Pro-rata calculation method
+- Age calculation date (1st January or date of birth)
+- Payment terms (days before considered overdue)
+
+---
+
+## 10. SUCCESS CRITERIA
+
+### Launch Readiness (February 2025)
+- [ ] All 200 current members imported
+- [ ] Admin and Treasurer can log in securely
+- [ ] Annual fees can be applied successfully
+- [ ] Payments can be recorded and tracked
+- [ ] Outstanding payment report available
+- [ ] Member data exportable to CSV
+
+### Key Metrics
+- Time to add new member: <2 minutes
+- Time to record payment: <30 seconds
+- System availability: 99.9% uptime
+- Data accuracy: Zero calculation errors
+- User satisfaction: Both users confident using system
+
+---
+
+## 11. CONSTRAINTS & ASSUMPTIONS
+
+### Constraints
+- Must be operational before February 2025 fee cycle
+- Two users only (no member portal)
+- Must work on standard web browsers
+- Firebase free tier preferred ($0 monthly cost)
+
+### Assumptions
+- Stable internet connection available
+- Users have basic computer skills
+- Member count remains around 200
+- Payment methods remain bank transfer and cash only
+- One golf club only (no multi-club management)
+
+---
+
+## 12. RISKS & MITIGATION
+
+| Risk | Impact | Mitigation |
+|------|---------|------------|
+| Data migration errors | High | Test with subset first, validate all imports |
+| User adoption issues | Medium | Simple interface, training session planned |
+| Firebase free tier limits | Low | 200 members well within limits |
+| Browser compatibility | Low | Test on all major browsers before launch |
+
+---
+
+## APPENDICES
+
+### A. Sample Receipt Number Format
+- Format: R[YEAR]-[SEQUENTIAL]
+- Example: R2025-001, R2025-002
+
+### B. CSV Export Fields
+- Full Name
+- Email
+- Phone
+- Address
+- Date of Birth
+- Golf Australia ID
+- Membership Category
+- Status
+- Account Balance
+- Date Joined
+
+### C. Glossary
+- **Account Balance**: Amount owed (positive) or credit (negative)
+- **Active Member**: Currently eligible to play/participate
+- **Pro-rata**: Proportional fee based on remaining months
+- **Fee Application**: Annual process of adding fees to accounts
+
+---
+
+*Document Version: 1.0*  
+*Last Updated: [Current Date]*  
+*Next Review: Post-February 2025 Launch*
