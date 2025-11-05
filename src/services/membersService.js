@@ -21,7 +21,7 @@ const MEMBERS_COLLECTION = 'members'
 export const createMember = async (memberData) => {
   try {
     // Auto-determine category based on date of birth if not provided
-    const category = memberData.membershipCategory || determineCategoryByAge(memberData.dateOfBirth)
+    const category = memberData.membershipCategory || await determineCategoryByAge(memberData.dateOfBirth)
 
     const newMember = {
       ...memberData,
@@ -284,5 +284,237 @@ export const downloadMembersCSV = (members, filename = 'members.csv') => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+}
+
+/**
+ * Parse CSV text into array of objects
+ * @param {string} csvText - CSV content as string
+ * @returns {Array} Array of member objects
+ */
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n').filter(line => line.trim())
+  if (lines.length < 2) {
+    throw new Error('CSV file is empty or contains only headers')
+  }
+
+  // Parse headers
+  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+
+  // Expected headers
+  const expectedHeaders = [
+    'Full Name',
+    'Email',
+    'Phone',
+    'Address',
+    'Date of Birth',
+    'Golf Australia ID',
+    'Membership Category',
+    'Status',
+    'Account Balance',
+    'Date Joined',
+    'Emergency Contact'
+  ]
+
+  // Validate headers match expected format
+  if (headers.length !== expectedHeaders.length) {
+    throw new Error(`Invalid CSV format. Expected ${expectedHeaders.length} columns, found ${headers.length}`)
+  }
+
+  // Parse rows
+  const members = []
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+
+    // Simple CSV parsing (handles quoted values)
+    const values = []
+    let currentValue = ''
+    let insideQuotes = false
+
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j]
+
+      if (char === '"') {
+        insideQuotes = !insideQuotes
+      } else if (char === ',' && !insideQuotes) {
+        values.push(currentValue.trim())
+        currentValue = ''
+      } else {
+        currentValue += char
+      }
+    }
+    values.push(currentValue.trim()) // Add last value
+
+    if (values.length !== expectedHeaders.length) {
+      members.push({
+        rowNumber: i + 1,
+        error: `Invalid number of columns (expected ${expectedHeaders.length}, found ${values.length})`
+      })
+      continue
+    }
+
+    // Map to member object
+    const member = {
+      rowNumber: i + 1,
+      fullName: values[0] || '',
+      email: values[1] || '',
+      phone: values[2] || '',
+      address: values[3] || '',
+      dateOfBirth: values[4] || '',
+      golfAustraliaId: values[5] || '',
+      membershipCategory: values[6] || '',
+      status: values[7] || 'active',
+      accountBalance: values[8] ? parseFloat(values[8]) : 0,
+      dateJoined: values[9] || '',
+      emergencyContact: values[10] || ''
+    }
+
+    members.push(member)
+  }
+
+  return members
+}
+
+/**
+ * Validate member data from CSV
+ * @param {Object} member - Member object to validate
+ * @returns {Object} { valid: boolean, error: string }
+ */
+const validateMemberData = (member) => {
+  // Full Name is required
+  if (!member.fullName || member.fullName.trim() === '') {
+    return { valid: false, error: 'Full Name is required' }
+  }
+
+  // Validate Date of Birth format (YYYY-MM-DD)
+  if (member.dateOfBirth) {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(member.dateOfBirth)) {
+      return { valid: false, error: 'Invalid Date of Birth format (use YYYY-MM-DD)' }
+    }
+  }
+
+  // Validate status
+  if (member.status && !['active', 'inactive'].includes(member.status.toLowerCase())) {
+    return { valid: false, error: 'Invalid Status (must be "active" or "inactive")' }
+  }
+
+  // Validate account balance
+  if (isNaN(member.accountBalance)) {
+    return { valid: false, error: 'Invalid Account Balance (must be a number)' }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Import members from CSV file
+ * @param {string} csvText - CSV content as string
+ * @returns {Object} Import results { successful, skipped, failed, details }
+ */
+export const importMembersFromCSV = async (csvText) => {
+  try {
+    // Parse CSV
+    const parsedMembers = parseCSV(csvText)
+
+    const results = {
+      total: parsedMembers.length,
+      successful: 0,
+      skipped: 0,
+      failed: 0,
+      details: []
+    }
+
+    // Get existing members to check for duplicates
+    const existingMembers = await getAllMembers()
+    const existingEmails = new Set(
+      existingMembers.map(m => m.email?.toLowerCase()).filter(Boolean)
+    )
+    const existingGolfIds = new Set(
+      existingMembers.map(m => m.golfAustraliaId?.toLowerCase()).filter(Boolean)
+    )
+
+    // Process each member
+    for (const member of parsedMembers) {
+      // Check if row already has error from parsing
+      if (member.error) {
+        results.failed++
+        results.details.push({
+          row: member.rowNumber,
+          status: 'failed',
+          reason: member.error
+        })
+        continue
+      }
+
+      // Validate member data
+      const validation = validateMemberData(member)
+      if (!validation.valid) {
+        results.failed++
+        results.details.push({
+          row: member.rowNumber,
+          name: member.fullName,
+          status: 'failed',
+          reason: validation.error
+        })
+        continue
+      }
+
+      // Check for duplicate email
+      if (member.email && existingEmails.has(member.email.toLowerCase())) {
+        results.skipped++
+        results.details.push({
+          row: member.rowNumber,
+          name: member.fullName,
+          status: 'skipped',
+          reason: 'Duplicate email'
+        })
+        continue
+      }
+
+      // Check for duplicate Golf Australia ID
+      if (member.golfAustraliaId && existingGolfIds.has(member.golfAustraliaId.toLowerCase())) {
+        results.skipped++
+        results.details.push({
+          row: member.rowNumber,
+          name: member.fullName,
+          status: 'skipped',
+          reason: 'Duplicate Golf Australia ID'
+        })
+        continue
+      }
+
+      // Create member
+      try {
+        // Remove rowNumber before creating
+        const { rowNumber, ...memberData } = member
+        await createMember(memberData)
+
+        results.successful++
+        results.details.push({
+          row: rowNumber,
+          name: member.fullName,
+          status: 'success'
+        })
+
+        // Add to existing sets to check subsequent duplicates in same file
+        if (member.email) existingEmails.add(member.email.toLowerCase())
+        if (member.golfAustraliaId) existingGolfIds.add(member.golfAustraliaId.toLowerCase())
+      } catch (error) {
+        results.failed++
+        results.details.push({
+          row: member.rowNumber,
+          name: member.fullName,
+          status: 'failed',
+          reason: error.message
+        })
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.error('Error importing members from CSV:', error)
+    throw error
   }
 }

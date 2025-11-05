@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getMembersWithOutstandingBalance, getMemberStats, downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getPaymentStats } from '../services/paymentsService'
-import { getCategoryById } from '../services/membershipCategories'
+import { getAllCategories } from '../services/membershipCategories'
 
 const Reports = () => {
   const [outstandingMembers, setOutstandingMembers] = useState([])
@@ -11,6 +11,7 @@ const Reports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [isLoading, setIsLoading] = useState(true)
   const [sortBy, setSortBy] = useState('balance') // 'balance' or 'name'
+  const [categories, setCategories] = useState([])
 
   useEffect(() => {
     fetchReportData()
@@ -19,15 +20,17 @@ const Reports = () => {
   const fetchReportData = async () => {
     try {
       setIsLoading(true)
-      const [outstanding, stats, payments] = await Promise.all([
+      const [outstanding, stats, payments, cats] = await Promise.all([
         getMembersWithOutstandingBalance(),
         getMemberStats(),
-        getPaymentStats(selectedYear)
+        getPaymentStats(selectedYear),
+        getAllCategories()
       ])
 
       setOutstandingMembers(outstanding)
       setMemberStats(stats)
       setPaymentStats(payments)
+      setCategories(cats)
     } catch (error) {
       console.error('Error fetching report data:', error)
     } finally {
@@ -177,7 +180,7 @@ const Reports = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedOutstanding.map(member => {
-                  const category = getCategoryById(member.membershipCategory)
+                  const category = categories.find(c => c.id === member.membershipCategory)
                   const amountOwed = Math.abs(member.accountBalance)
                   return (
                     <tr key={member.id} className="hover:bg-gray-50">

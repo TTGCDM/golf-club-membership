@@ -10,6 +10,7 @@ import MemberDetail from './pages/MemberDetail'
 import Payments from './pages/Payments'
 import Reports from './pages/Reports'
 import Users from './pages/Users'
+import Admin from './pages/Admin'
 import PrivateRoute from './components/PrivateRoute'
 import Layout from './components/Layout'
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
+            <Route path="admin" element={<Admin />} />
           </Route>
         </Routes>
       </Router>

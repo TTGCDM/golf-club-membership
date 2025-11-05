@@ -11,8 +11,8 @@ const Dashboard = () => {
   const [recentPayments, setRecentPayments] = useState([])
   const [outstandingMembers, setOutstandingMembers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [categories, setCategories] = useState([])
 
-  const categories = getAllCategories()
   const canEdit = checkPermission(ROLES.EDIT)
 
   useEffect(() => {
@@ -24,15 +24,17 @@ const Dashboard = () => {
       setIsLoading(true)
 
       // Fetch all data in parallel
-      const [memberStats, payments, outstanding] = await Promise.all([
+      const [memberStats, payments, outstanding, cats] = await Promise.all([
         getMemberStats(),
         getAllPayments(),
-        getMembersWithOutstandingBalance()
+        getMembersWithOutstandingBalance(),
+        getAllCategories()
       ])
 
       setStats(memberStats)
       setRecentPayments(payments.slice(0, 10)) // Last 10 payments
       setOutstandingMembers(outstanding.slice(0, 5)) // Top 5 outstanding
+      setCategories(cats)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -163,7 +165,7 @@ const Dashboard = () => {
                       {member.fullName}
                     </Link>
                     <p className="text-xs text-gray-500">
-                      {getCategoryById(member.membershipCategory)?.name}
+                      {categories.find(c => c.id === member.membershipCategory)?.name}
                     </p>
                   </div>
                   <span className="text-sm font-bold text-red-600">

@@ -211,6 +211,67 @@ service cloud.firestore {
 
 
     // ============================================
+    // FEES COLLECTION
+    // ============================================
+
+    match /fees/{feeId} {
+      // Anyone with VIEW role can read fees
+      allow read: if canRead();
+
+      // Only SUPER_ADMIN can create fees (via fee application)
+      allow create: if isSuperAdmin() &&
+                      isValidFeeData(request.resource.data);
+
+      // Only SUPER_ADMIN can update or delete fees
+      allow update, delete: if isSuperAdmin();
+
+      // Validate fee data structure
+      function isValidFeeData(data) {
+        return data.memberId is string && data.memberId.size() > 0 &&
+               data.memberName is string && data.memberName.size() > 0 &&
+               data.feeYear is number && data.feeYear >= 2020 && data.feeYear <= 2030 &&
+               data.categoryId is string && data.categoryId.size() > 0 &&
+               data.categoryName is string && data.categoryName.size() > 0 &&
+               data.amount is number && data.amount >= 0 &&
+               data.appliedDate is string &&
+               data.appliedBy is string && data.appliedBy.size() > 0 &&
+               data.notes is string;
+      }
+    }
+
+
+    // ============================================
+    // MEMBERSHIP CATEGORIES COLLECTION
+    // ============================================
+
+    match /membershipCategories/{categoryId} {
+      // Anyone with VIEW role can read categories
+      allow read: if canRead();
+
+      // Only SUPER_ADMIN can create, update, or delete categories
+      allow create: if isSuperAdmin() &&
+                      isValidCategoryData(request.resource.data);
+
+      allow update: if isSuperAdmin() &&
+                      isValidCategoryData(request.resource.data);
+
+      allow delete: if isSuperAdmin();
+
+      // Validate category data structure
+      function isValidCategoryData(data) {
+        return data.name is string && data.name.size() > 0 &&
+               data.ageMin is number && data.ageMin >= 0 &&
+               data.ageMax is number && data.ageMax >= 0 &&
+               data.playingRights is string &&
+               data.annualFee is number && data.annualFee >= 0 &&
+               data.joiningFee is number && data.joiningFee >= 0 &&
+               data.order is number &&
+               data.isSpecial is bool;
+      }
+    }
+
+
+    // ============================================
     // DENY ALL OTHER COLLECTIONS
     // ============================================
 

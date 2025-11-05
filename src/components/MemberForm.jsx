@@ -18,8 +18,20 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
 
   const [suggestedCategory, setSuggestedCategory] = useState(null)
   const [currentAge, setCurrentAge] = useState(null)
+  const [categories, setCategories] = useState([])
 
-  const categories = getAllCategories()
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await getAllCategories()
+        setCategories(cats)
+      } catch (error) {
+        console.error('Error loading categories:', error)
+      }
+    }
+    loadCategories()
+  }, [])
 
   // Load existing member data if editing
   useEffect(() => {
@@ -42,18 +54,21 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
 
   // Auto-suggest category based on date of birth
   useEffect(() => {
-    if (formData.dateOfBirth) {
-      const age = calculateAge(formData.dateOfBirth)
-      setCurrentAge(age)
+    const suggestCategory = async () => {
+      if (formData.dateOfBirth) {
+        const age = calculateAge(formData.dateOfBirth)
+        setCurrentAge(age)
 
-      const suggested = determineCategoryByAge(formData.dateOfBirth)
-      setSuggestedCategory(suggested)
+        const suggested = await determineCategoryByAge(formData.dateOfBirth)
+        setSuggestedCategory(suggested)
 
-      // Auto-fill category if not already set
-      if (!formData.membershipCategory && !member) {
-        setFormData(prev => ({ ...prev, membershipCategory: suggested }))
+        // Auto-fill category if not already set
+        if (!formData.membershipCategory && !member) {
+          setFormData(prev => ({ ...prev, membershipCategory: suggested }))
+        }
       }
     }
+    suggestCategory()
   }, [formData.dateOfBirth, member])
 
   const handleChange = (e) => {

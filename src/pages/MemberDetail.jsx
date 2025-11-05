@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMemberById } from '../services/membersService'
-import { getCategoryById, calculateAge } from '../services/membershipCategories'
+import { getAllCategories, calculateAge } from '../services/membershipCategories'
 import { getPaymentsByMember, formatPaymentMethod } from '../services/paymentsService'
+import { getFeesByMember } from '../services/feeService'
 
 const MemberDetail = () => {
   const { checkPermission, ROLES } = useAuth()
   const [member, setMember] = useState(null)
   const [payments, setPayments] = useState([])
+  const [fees, setFees] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [category, setCategory] = useState(null)
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -19,12 +22,20 @@ const MemberDetail = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const memberData = await getMemberById(id)
-        setMember(memberData)
+        const [memberData, paymentData, feeData, categories] = await Promise.all([
+          getMemberById(id),
+          getPaymentsByMember(id),
+          getFeesByMember(id),
+          getAllCategories()
+        ])
 
-        // Fetch payment history
-        const paymentData = await getPaymentsByMember(id)
+        setMember(memberData)
         setPayments(paymentData)
+        setFees(feeData)
+
+        // Find the category for this member
+        const memberCategory = categories.find(c => c.id === memberData.membershipCategory)
+        setCategory(memberCategory)
       } catch (err) {
         console.error('Error fetching data:', err)
         setError('Failed to load member data.')
@@ -59,9 +70,9 @@ const MemberDetail = () => {
     )
   }
 
-  const category = getCategoryById(member.membershipCategory)
   const age = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
 
+  // Helper function to determine balance color
   const getBalanceColor = (balance) => {
     if (balance > 0) return 'text-green-600' // Positive = credit
     if (balance < 0) return 'text-red-600'   // Negative = owes money
@@ -196,74 +207,102 @@ const MemberDetail = () => {
           </div>
         </div>
 
-        {/* Payment History */}
+        {/* Transaction History (Payments & Fees) */}
         <div className="lg:col-span-3">
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction History</h3>
 
-            {payments.length === 0 ? (
-              <p className="text-gray-600">No payments recorded yet</p>
+            {payments.length === 0 && fees.length === 0 ? (
+              <p className="text-gray-600">No transactions recorded yet</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Receipt #
+                        Type
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
+                        Description
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Method
+                        Amount
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Reference
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Notes
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {payments.map(payment => (
-                      <tr key={payment.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {payment.receiptNumber}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {payment.paymentDate}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                          ${payment.amount.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {formatPaymentMethod(payment.paymentMethod)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {payment.reference || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {payment.notes || '-'}
-                        </td>
-                      </tr>
-                    ))}
+                    {/* Combine payments and fees, sort by date */}
+                    {[
+                      ...payments.map(p => ({ ...p, type: 'payment', date: p.paymentDate })),
+                      ...fees.map(f => ({ ...f, type: 'fee', date: f.appliedDate }))
+                    ]
+                      .sort((a, b) => b.date.localeCompare(a.date))
+                      .map((transaction, index) => (
+                        <tr key={`${transaction.type}-${transaction.id || index}`}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            {transaction.type === 'payment' ? (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                Payment
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                Fee
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {transaction.date}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {transaction.type === 'payment'
+                              ? `${formatPaymentMethod(transaction.paymentMethod)} - ${transaction.receiptNumber}`
+                              : transaction.notes}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                            {transaction.type === 'payment' ? (
+                              <span className="text-green-600">+${transaction.amount.toFixed(2)}</span>
+                            ) : (
+                              <span className="text-red-600">-${transaction.amount.toFixed(2)}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {transaction.type === 'payment'
+                              ? transaction.reference || '-'
+                              : `${transaction.feeYear} Annual Fee`}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
 
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Total Payments: <span className="font-medium">{payments.length}</span>
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Total Amount: <span className="font-medium text-green-600">
-                        ${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
-                      </span>
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Payments: <span className="font-medium">{payments.length}</span>
+                      </p>
+                      <p className="text-sm text-green-600">
+                        Total: <span className="font-medium">
+                          +${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Fees Applied: <span className="font-medium">{fees.length}</span>
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Total: <span className="font-medium">
+                          -${fees.reduce((sum, f) => sum + f.amount, 0).toFixed(2)}
+                        </span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

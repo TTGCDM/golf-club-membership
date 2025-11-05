@@ -7,6 +7,7 @@ const Layout = () => {
   const location = useLocation()
 
   const canAccessUsers = checkPermission(ROLES.ADMIN)
+  const canAccessAdmin = checkPermission(ROLES.SUPER_ADMIN)
 
   const handleLogout = async () => {
     try {
@@ -62,6 +63,14 @@ const Layout = () => {
                     className={`${isActive('/users')} px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition`}
                   >
                     Users
+                  </Link>
+                )}
+                {canAccessAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`${isActive('/admin')} px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition`}
+                  >
+                    Admin
                   </Link>
                 )}
               </div>

@@ -12,8 +12,8 @@ const Members = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [categories, setCategories] = useState([])
 
-  const categories = getAllCategories()
   const canEdit = checkPermission(ROLES.EDIT)
 
   useEffect(() => {
@@ -27,8 +27,12 @@ const Members = () => {
   const fetchMembers = async () => {
     try {
       setIsLoading(true)
-      const data = await getAllMembers()
+      const [data, cats] = await Promise.all([
+        getAllMembers(),
+        getAllCategories()
+      ])
       setMembers(data)
+      setCategories(cats)
     } catch (error) {
       console.error('Error fetching members:', error)
     } finally {
@@ -195,7 +199,7 @@ const Members = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMembers.map(member => {
-                const category = getCategoryById(member.membershipCategory)
+                const category = categories.find(c => c.id === member.membershipCategory)
                 return (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
