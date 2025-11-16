@@ -127,3 +127,72 @@ export const getDataStats = async () => {
     throw error
   }
 }
+
+/**
+ * Export all data from the system as JSON
+ * @returns {Object} Object containing all collection data
+ */
+export const exportAllData = async () => {
+  try {
+    // Fetch all collections in parallel
+    const [membersSnap, paymentsSnap, usersSnap, categoriesSnap, feesSnap] = await Promise.all([
+      getDocs(collection(db, MEMBERS_COLLECTION)),
+      getDocs(collection(db, PAYMENTS_COLLECTION)),
+      getDocs(collection(db, USERS_COLLECTION)),
+      getDocs(collection(db, 'membershipCategories')),
+      getDocs(collection(db, 'fees'))
+    ])
+
+    // Convert snapshots to arrays of objects
+    const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const fees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+    return {
+      exportDate: new Date().toISOString(),
+      version: '1.1.0',
+      collections: {
+        members,
+        payments,
+        users,
+        membershipCategories: categories,
+        fees
+      },
+      counts: {
+        members: members.length,
+        payments: payments.length,
+        users: users.length,
+        categories: categories.length,
+        fees: fees.length
+      }
+    }
+  } catch (error) {
+    console.error('Error exporting data:', error)
+    throw error
+  }
+}
+
+/**
+ * Download exported data as a JSON file
+ * @param {Object} data - Data object to export
+ * @param {string} filename - Name for the downloaded file
+ */
+export const downloadJSONBackup = (data, filename = `backup-${new Date().toISOString().split('T')[0]}.json`) => {
+  try {
+    const jsonString = JSON.stringify(data, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error downloading JSON backup:', error)
+    throw error
+  }
+}

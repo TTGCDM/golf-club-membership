@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check User Permissions</title>
+</head>
+<body>
+    <h1>User Permission Checker</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'
+
+        // Your Firebase config (will be read from env)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWxkMGF9LYOWy8zLZz4HhGz1TKJ7KQQX4",
+            authDomain: "tea-tree-golf-club.firebaseapp.com",
+            projectId: "tea-tree-golf-club",
+            storageBucket: "tea-tree-golf-club.firebasestorage.app",
+            messagingSenderId: "1020081234138",
+            appId: "1:1020081234138:web:f7e8d9c6b5a4f3e2d1c0b9"
+        }
+
+        const app = initializeApp(firebaseConfig)
+        const auth = getAuth(app)
+        const db = getFirestore(app)
+        const output = document.getElementById('output')
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                output.innerHTML = `<h2>Checking user: ${user.email}</h2>`
+                output.innerHTML += `<p>UID: ${user.uid}</p>`
+
+                try {
+                    const userDocRef = doc(db, 'users', user.uid)
+                    const userDoc = await getDoc(userDocRef)
+
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data()
+                        output.innerHTML += `<h3>✅ User document found</h3>`
+                        output.innerHTML += `<p><strong>Email:</strong> ${userData.email}</p>`
+                        output.innerHTML += `<p><strong>Role:</strong> ${userData.role}</p>`
+                        output.innerHTML += `<p><strong>Status:</strong> ${userData.status}</p>`
+                        output.innerHTML += `<p><strong>Created:</strong> ${userData.createdAt?.toDate?.()}</p>`
+
+                        if (userData.status !== 'active') {
+                            output.innerHTML += `<p style="color: red;">⚠️ <strong>PROBLEM:</strong> Status is "${userData.status}" but must be "active"</p>`
+                        }
+
+                        if (!['edit', 'admin', 'super_admin'].includes(userData.role)) {
+                            output.innerHTML += `<p style="color: red;">⚠️ <strong>PROBLEM:</strong> Role is "${userData.role}" but needs to be "edit", "admin", or "super_admin" to import members</p>`
+                        }
+
+                        if (userData.status === 'active' && ['edit', 'admin', 'super_admin'].includes(userData.role)) {
+                            output.innerHTML += `<p style="color: green;">✅ <strong>User permissions are correct!</strong></p>`
+                            output.innerHTML += `<p>You should be able to import members. If you're still getting errors, try logging out and back in.</p>`
+                        }
+                    } else {
+                        output.innerHTML += `<h3 style="color: red;">❌ User document NOT found</h3>`
+                        output.innerHTML += `<p>There is no document in the users collection for your account.</p>`
+                        output.innerHTML += `<p><strong>This is the problem!</strong> The security rules require a user document.</p>`
+                    }
+                } catch (error) {
+                    output.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`
+                }
+            } else {
+                output.innerHTML = '<p>Not logged in. Please log in to the app first.</p>'
+            }
+        })
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import PaymentForm from '../components/PaymentForm'
-import { recordPayment, getAllPayments, deletePayment, formatPaymentMethod } from '../services/paymentsService'
+import { recordPayment, getAllPayments, deletePayment, updatePayment, formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
 import { getMemberById } from '../services/membersService'
 
 const Payments = () => {
@@ -12,6 +12,9 @@ const Payments = () => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [preSelectedMember, setPreSelectedMember] = useState(null)
+  const [editingPayment, setEditingPayment] = useState(null)
+  const [sortColumn, setSortColumn] = useState('paymentDate')
+  const [sortDirection, setSortDirection] = useState('desc')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { currentUser, checkPermission, ROLES } = useAuth()
@@ -53,17 +56,26 @@ const Payments = () => {
     setSuccess(null)
 
     try {
-      const result = await recordPayment(formData, currentUser.uid)
-      setSuccess(`Payment recorded successfully! Receipt #${result.receiptNumber}`)
+      if (editingPayment) {
+        // Update existing payment
+        await updatePayment(editingPayment.id, formData, currentUser.uid)
+        setSuccess(`Payment updated successfully!`)
+      } else {
+        // Create new payment
+        const result = await recordPayment(formData, currentUser.uid)
+        setSuccess(`Payment recorded successfully! Receipt #${result.receiptNumber}`)
+      }
+
       setShowForm(false)
       setPreSelectedMember(null)
+      setEditingPayment(null)
       await fetchPayments()
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(null), 5000)
     } catch (err) {
-      console.error('Error recording payment:', err)
-      setError('Failed to record payment. Please try again.')
+      console.error('Error saving payment:', err)
+      setError(`Failed to ${editingPayment ? 'update' : 'record'} payment. Please try again.`)
     } finally {
       setIsLoading(false)
     }
@@ -85,10 +97,84 @@ const Payments = () => {
     }
   }
 
+  const handleEdit = (payment) => {
+    setEditingPayment(payment)
+    setShowForm(true)
+    setError(null)
+  }
+
+  const handlePrintReceipt = async (payment) => {
+    try {
+      await generatePDFReceipt(payment)
+      setSuccess('Receipt generated successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (error) {
+      console.error('Error generating receipt:', error)
+      setError('Failed to generate receipt')
+      setTimeout(() => setError(null), 3000)
+    }
+  }
+
   const handleCancel = () => {
     setShowForm(false)
     setPreSelectedMember(null)
+    setEditingPayment(null)
     setError(null)
+  }
+
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Set new column and default to descending
+      setSortColumn(column)
+      setSortDirection('desc')
+    }
+  }
+
+  // Sort payments based on current sort settings
+  const sortedPayments = [...payments].sort((a, b) => {
+    let aValue = a[sortColumn]
+    let bValue = b[sortColumn]
+
+    // Handle different data types
+    if (sortColumn === 'amount') {
+      aValue = parseFloat(aValue) || 0
+      bValue = parseFloat(bValue) || 0
+    } else if (sortColumn === 'paymentDate') {
+      aValue = new Date(aValue).getTime()
+      bValue = new Date(bValue).getTime()
+    } else if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase()
+      bValue = bValue.toLowerCase()
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const SortIcon = ({ column }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      )
+    }
+    if (sortDirection === 'asc') {
+      return (
+        <svg className="w-4 h-4 text-blue-600 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      )
+    }
+    return (
+      <svg className="w-4 h-4 text-blue-600 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    )
   }
 
   return (
@@ -127,6 +213,7 @@ const Payments = () => {
       {showForm && (
         <div className="mb-6">
           <PaymentForm
+            payment={editingPayment}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             isLoading={isLoading}
@@ -150,26 +237,47 @@ const Payments = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Receipt #
+                  <th
+                    onClick={() => handleSort('receiptNumber')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Receipt # <SortIcon column="receiptNumber" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                  <th
+                    onClick={() => handleSort('paymentDate')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Date <SortIcon column="paymentDate" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Member
+                  <th
+                    onClick={() => handleSort('memberName')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Member <SortIcon column="memberName" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                  <th
+                    onClick={() => handleSort('amount')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Amount <SortIcon column="amount" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Method
+                  <th
+                    onClick={() => handleSort('paymentMethod')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Method <SortIcon column="paymentMethod" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Reference
+                  <th
+                    onClick={() => handleSort('reference')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Reference <SortIcon column="reference" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Recorded By
+                  <th
+                    onClick={() => handleSort('recordedBy')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    Recorded By <SortIcon column="recordedBy" />
                   </th>
                   {canEdit && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -179,7 +287,7 @@ const Payments = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {payments.map(payment => (
+                {sortedPayments.map(payment => (
                   <tr key={payment.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {payment.receiptNumber}
@@ -209,6 +317,19 @@ const Payments = () => {
                     </td>
                     {canEdit && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button
+                          onClick={() => handlePrintReceipt(payment)}
+                          className="text-green-600 hover:text-green-900 mr-4"
+                          title="Print Receipt"
+                        >
+                          Print
+                        </button>
+                        <button
+                          onClick={() => handleEdit(payment)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => handleDelete(payment.id)}
                           className="text-red-600 hover:text-red-900"

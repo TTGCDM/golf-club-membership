@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Member Categories</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 10px 5px; }
+        .primary { background: #3B82F6; color: white; border: none; border-radius: 5px; }
+        .primary:hover { background: #2563EB; }
+        #output { margin-top: 20px; padding: 15px; background: #F3F4F6; border-radius: 5px; white-space: pre-wrap; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Fix Member Categories</h1>
+    <p>This will update all members whose membershipCategory is a STRING name to use the correct category ID instead.</p>
+
+    <button class="primary" onclick="checkMembers()">1. Check Members</button>
+    <button class="primary" onclick="fixMembers()" id="fixBtn" disabled>2. Fix Categories</button>
+
+    <div id="output"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'
+        import { getFirestore, collection, getDocs, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWxkMGF9LYOWy8zLZz4HhGz1TKJ7KQQX4",
+            authDomain: "tea-tree-golf-club.firebaseapp.com",
+            projectId: "tea-tree-golf-club",
+            storageBucket: "tea-tree-golf-club.firebasestorage.app",
+            messagingSenderId: "1020081234138",
+            appId: "1:1020081234138:web:f7e8d9c6b5a4f3e2d1c0b9"
+        }
+
+        const app = initializeApp(firebaseConfig)
+        const auth = getAuth(app)
+        const db = getFirestore(app)
+
+        let membersToFix = []
+        let categories = []
+
+        window.checkMembers = async function() {
+            const output = document.getElementById('output')
+            output.innerHTML = 'Loading...'
+
+            try {
+                // Get all categories
+                const catsSnapshot = await getDocs(collection(db, 'membershipCategories'))
+                categories = catsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+                if (categories.length === 0) {
+                    output.innerHTML = '<span class="error">❌ No categories found! Go to Admin page and click "Seed Default Categories" first.</span>'
+                    return
+                }
+
+                // Get all members
+                const membersSnapshot = await getDocs(collection(db, 'members'))
+                const members = membersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+                // Find members with string categories (not IDs)
+                membersToFix = members.filter(m => {
+                    // Check if membershipCategory is NOT a category ID
+                    const isValidId = categories.some(c => c.id === m.membershipCategory)
+                    return !isValidId && m.membershipCategory
+                })
+
+                let result = `<strong>Categories Found:</strong> ${categories.length}\n`
+                categories.forEach(c => {
+                    result += `  - ${c.name} (ID: ${c.id})\n`
+                })
+
+                result += `\n<strong>Total Members:</strong> ${members.length}\n`
+                result += `<strong class="error">Members to Fix:</strong> ${membersToFix.length}\n\n`
+
+                if (membersToFix.length > 0) {
+                    result += `<strong>Members with invalid categories:</strong>\n`
+                    membersToFix.forEach(m => {
+                        result += `  - ${m.fullName} (Category: "${m.membershipCategory}")\n`
+                    })
+                    result += `\n<span class="success">✅ Click "Fix Categories" to update these members</span>`
+                    document.getElementById('fixBtn').disabled = false
+                } else {
+                    result += `<span class="success">✅ All members have valid category IDs!</span>`
+                }
+
+                output.innerHTML = result
+            } catch (error) {
+                output.innerHTML = `<span class="error">Error: ${error.message}</span>`
+            }
+        }
+
+        window.fixMembers = async function() {
+            if (membersToFix.length === 0) {
+                alert('No members to fix!')
+                return
+            }
+
+            if (!confirm(`Fix ${membersToFix.length} members' categories?`)) {
+                return
+            }
+
+            const output = document.getElementById('output')
+            output.innerHTML = 'Fixing...'
+            document.getElementById('fixBtn').disabled = true
+
+            let fixed = 0
+            let errors = 0
+            let result = ''
+
+            for (const member of membersToFix) {
+                try {
+                    // Find the matching category by name
+                    let newCategoryId = null
+
+                    // Try exact match
+                    const exactMatch = categories.find(c =>
+                        c.name.toLowerCase() === member.membershipCategory.toLowerCase()
+                    )
+                    if (exactMatch) {
+                        newCategoryId = exactMatch.id
+                    } else {
+                        // Try partial match
+                        const partialMatch = categories.find(c =>
+                            c.name.toLowerCase().includes(member.membershipCategory.toLowerCase()) ||
+                            member.membershipCategory.toLowerCase().includes(c.name.toLowerCase())
+                        )
+                        newCategoryId = partialMatch ? partialMatch.id : categories[0]?.id
+                    }
+
+                    if (newCategoryId) {
+                        const memberRef = doc(db, 'members', member.id)
+                        await updateDoc(memberRef, {
+                            membershipCategory: newCategoryId,
+                            updatedAt: serverTimestamp()
+                        })
+                        fixed++
+                        result += `✅ Fixed: ${member.fullName} → ${categories.find(c => c.id === newCategoryId)?.name}\n`
+                    }
+                } catch (error) {
+                    errors++
+                    result += `❌ Error fixing ${member.fullName}: ${error.message}\n`
+                }
+            }
+
+            result += `\n<strong class="success">✅ Fixed: ${fixed}</strong>\n`
+            if (errors > 0) result += `<strong class="error">❌ Errors: ${errors}</strong>\n`
+            result += `\n<span class="success">Done! Refresh the app and check the fee preview again.</span>`
+
+            output.innerHTML = result
+        }
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMemberById } from '../services/membersService'
 import { getAllCategories, calculateAge } from '../services/membershipCategories'
-import { getPaymentsByMember, formatPaymentMethod } from '../services/paymentsService'
+import { getPaymentsByMember, formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
 import { getFeesByMember } from '../services/feeService'
 
 const MemberDetail = () => {
@@ -13,11 +13,24 @@ const MemberDetail = () => {
   const [fees, setFees] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [category, setCategory] = useState(null)
   const { id } = useParams()
   const navigate = useNavigate()
 
   const canEdit = checkPermission(ROLES.EDIT)
+
+  const handlePrintReceipt = async (payment) => {
+    try {
+      await generatePDFReceipt(payment)
+      setSuccess('Receipt generated successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Error generating receipt:', err)
+      setError('Failed to generate receipt')
+      setTimeout(() => setError(null), 3000)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,6 +120,13 @@ const MemberDetail = () => {
           </Link>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+          <p className="text-green-800">{success}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Account Balance Card */}
@@ -234,6 +254,9 @@ const MemberDetail = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Reference
                       </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -275,6 +298,17 @@ const MemberDetail = () => {
                             {transaction.type === 'payment'
                               ? transaction.reference || '-'
                               : `${transaction.feeYear} Annual Fee`}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {transaction.type === 'payment' && (
+                              <button
+                                onClick={() => handlePrintReceipt(transaction)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Print Receipt"
+                              >
+                                Print
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

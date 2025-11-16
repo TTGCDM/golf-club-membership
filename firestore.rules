@@ -98,8 +98,8 @@ service cloud.firestore {
                data.phone is string &&
                data.address is string &&
                data.dateOfBirth is string &&
-               data.golfAustraliaId is string &&
-               data.membershipCategory is string && data.membershipCategory.size() > 0 &&
+               data.golfAustraliaId is string && data.golfAustraliaId.size() > 0 &&
+               data.membershipCategory is string &&
                data.accountBalance is number &&
                data.status in ['active', 'inactive'] &&
                data.dateJoined is string &&
@@ -116,7 +116,8 @@ service cloud.firestore {
         return data.keys().hasAll(['fullName', 'email', 'phone', 'address',
                                    'dateOfBirth', 'golfAustraliaId', 'membershipCategory',
                                    'accountBalance', 'status', 'dateJoined',
-                                   'emergencyContact', 'createdAt', 'updatedAt']);
+                                   'emergencyContact']);
+        // Note: createdAt and updatedAt are validated separately to allow serverTimestamp()
       }
     }
 
@@ -160,7 +161,8 @@ service cloud.firestore {
       function hasRequiredPaymentFields(data) {
         return data.keys().hasAll(['memberId', 'memberName', 'amount', 'paymentDate',
                                    'paymentMethod', 'reference', 'notes', 'receiptNumber',
-                                   'recordedBy', 'createdAt', 'updatedAt']);
+                                   'recordedBy']);
+        // Note: createdAt and updatedAt are validated separately to allow serverTimestamp()
       }
     }
 
@@ -205,7 +207,8 @@ service cloud.firestore {
       }
 
       function hasRequiredUserFields(data) {
-        return data.keys().hasAll(['email', 'role', 'status', 'createdAt', 'updatedAt']);
+        return data.keys().hasAll(['email', 'role', 'status']);
+        // Note: createdAt and updatedAt are validated separately to allow serverTimestamp()
       }
     }
 

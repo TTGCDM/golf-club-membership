@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getMembersWithOutstandingBalance, getMemberStats, downloadMembersCSV, getAllMembers } from '../services/membersService'
-import { getPaymentStats } from '../services/paymentsService'
+import { getPaymentStats, getAllPayments } from '../services/paymentsService'
 import { getAllCategories } from '../services/membershipCategories'
+import jsPDF from 'jspdf'
 
 const Reports = () => {
   const [outstandingMembers, setOutstandingMembers] = useState([])
@@ -12,6 +13,11 @@ const Reports = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [sortBy, setSortBy] = useState('balance') // 'balance' or 'name'
   const [categories, setCategories] = useState([])
+
+  // Report Builder State
+  const [reportType, setReportType] = useState('outstanding')
+  const [exportFormat, setExportFormat] = useState('csv')
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     fetchReportData()
@@ -55,6 +61,187 @@ const Reports = () => {
     } else {
       return sorted.sort((a, b) => a.fullName.localeCompare(b.fullName))
     }
+  }
+
+  const generateReport = async () => {
+    setIsGenerating(true)
+    try {
+      let data = []
+      let filename = ''
+      let title = ''
+
+      switch (reportType) {
+        case 'outstanding':
+          data = outstandingMembers.map(m => ({
+            'Member Name': m.fullName,
+            'Email': m.email || '',
+            'Phone': m.phone || '',
+            'Category': categories.find(c => c.id === m.membershipCategory)?.name || '',
+            'Amount Owed': `$${Math.abs(m.accountBalance).toFixed(2)}`
+          }))
+          filename = `outstanding-payments-${new Date().toISOString().split('T')[0]}`
+          title = 'Outstanding Payments Report'
+          break
+
+        case 'all-members':
+          const allMembers = await getAllMembers()
+          data = allMembers.map(m => ({
+            'Member Name': m.fullName,
+            'Email': m.email || '',
+            'Phone': m.phone || '',
+            'Category': categories.find(c => c.id === m.membershipCategory)?.name || '',
+            'Status': m.status,
+            'Balance': `$${(m.accountBalance || 0).toFixed(2)}`,
+            'Date Joined': m.dateJoined || ''
+          }))
+          filename = `all-members-${new Date().toISOString().split('T')[0]}`
+          title = 'All Members Report'
+          break
+
+        case 'active-members':
+          const allActive = await getAllMembers()
+          const activeMembers = allActive.filter(m => m.status === 'active')
+          data = activeMembers.map(m => ({
+            'Member Name': m.fullName,
+            'Email': m.email || '',
+            'Phone': m.phone || '',
+            'Category': categories.find(c => c.id === m.membershipCategory)?.name || '',
+            'Balance': `$${(m.accountBalance || 0).toFixed(2)}`,
+            'Date Joined': m.dateJoined || ''
+          }))
+          filename = `active-members-${new Date().toISOString().split('T')[0]}`
+          title = 'Active Members Report'
+          break
+
+        case 'payments':
+          const payments = await getAllPayments()
+          const yearPayments = payments.filter(p => p.paymentDate && p.paymentDate.startsWith(selectedYear.toString()))
+          data = yearPayments.map(p => ({
+            'Date': p.paymentDate,
+            'Receipt #': p.receiptNumber,
+            'Member': p.memberName,
+            'Amount': `$${p.amount.toFixed(2)}`,
+            'Method': p.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Cash',
+            'Reference': p.reference || '',
+            'Recorded By': p.recordedBy
+          }))
+          filename = `payments-${selectedYear}-${new Date().toISOString().split('T')[0]}`
+          title = `Payment History ${selectedYear}`
+          break
+
+        default:
+          return
+      }
+
+      if (exportFormat === 'csv') {
+        exportToCSV(data, filename)
+      } else {
+        exportToPDF(data, title, filename)
+      }
+    } catch (error) {
+      console.error('Error generating report:', error)
+      alert('Failed to generate report. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const exportToCSV = (data, filename) => {
+    if (data.length === 0) {
+      alert('No data to export')
+      return
+    }
+
+    const headers = Object.keys(data[0])
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${filename}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const exportToPDF = (data, title, filename) => {
+    if (data.length === 0) {
+      alert('No data to export')
+      return
+    }
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    let yPosition = 20
+
+    // Title
+    doc.setFontSize(18)
+    doc.setTextColor(41, 128, 185)
+    doc.text(title, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 10
+
+    // Date
+    doc.setFontSize(10)
+    doc.setTextColor(100, 100, 100)
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 15
+
+    // Data
+    doc.setFontSize(9)
+    doc.setTextColor(44, 62, 80)
+
+    const headers = Object.keys(data[0])
+    const columnWidth = (pageWidth - 20) / headers.length
+    const rowHeight = 8
+
+    // Headers
+    doc.setFont(undefined, 'bold')
+    headers.forEach((header, i) => {
+      doc.text(header, 10 + (i * columnWidth), yPosition)
+    })
+    yPosition += rowHeight
+
+    // Data rows
+    doc.setFont(undefined, 'normal')
+    data.forEach((row, rowIndex) => {
+      if (yPosition > pageHeight - 20) {
+        doc.addPage()
+        yPosition = 20
+
+        // Re-print headers on new page
+        doc.setFont(undefined, 'bold')
+        headers.forEach((header, i) => {
+          doc.text(header, 10 + (i * columnWidth), yPosition)
+        })
+        yPosition += rowHeight
+        doc.setFont(undefined, 'normal')
+      }
+
+      headers.forEach((header, i) => {
+        const text = String(row[header])
+        const maxWidth = columnWidth - 2
+        doc.text(text.substring(0, 25), 10 + (i * columnWidth), yPosition, { maxWidth })
+      })
+      yPosition += rowHeight
+    })
+
+    // Footer
+    const totalPages = doc.internal.pages.length - 1
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
+      doc.text('Tea Tree Golf Club', pageWidth - 15, pageHeight - 10, { align: 'right' })
+    }
+
+    doc.save(`${filename}.pdf`)
   }
 
   if (isLoading) {
@@ -127,106 +314,100 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Outstanding Payments Report */}
+      {/* Report Builder */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Report Builder</h2>
+          <p className="text-sm text-gray-600">Generate custom reports and export to PDF or CSV</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Report Type Selection */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Outstanding Payments Report</h2>
-            <p className="text-sm text-gray-600">Members who currently owe money</p>
-          </div>
-          <div className="flex gap-2">
+            <label htmlFor="reportType" className="block text-sm font-medium text-gray-700 mb-2">
+              Report Type
+            </label>
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              id="reportType"
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="balance">Sort by Amount Owed</option>
-              <option value="name">Sort by Name</option>
+              <option value="outstanding">Outstanding Payments</option>
+              <option value="all-members">All Members</option>
+              <option value="active-members">Active Members Only</option>
+              <option value="payments">Payment History ({selectedYear})</option>
             </select>
-            <button
-              onClick={handleExportOutstanding}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+          </div>
+
+          {/* Export Format Selection */}
+          <div>
+            <label htmlFor="exportFormat" className="block text-sm font-medium text-gray-700 mb-2">
+              Export Format
+            </label>
+            <select
+              id="exportFormat"
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              Export CSV
+              <option value="csv">CSV (Excel Compatible)</option>
+              <option value="pdf">PDF Document</option>
+            </select>
+          </div>
+
+          {/* Generate Button */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Action
+            </label>
+            <button
+              onClick={generateReport}
+              disabled={isGenerating}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isGenerating ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Generate Report
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        {sortedOutstanding.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600">No outstanding payments - all members are paid up!</p>
+        {/* Report Description */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+            {reportType === 'outstanding' && 'Outstanding Payments Report'}
+            {reportType === 'all-members' && 'All Members Report'}
+            {reportType === 'active-members' && 'Active Members Report'}
+            {reportType === 'payments' && `Payment History Report (${selectedYear})`}
+          </h3>
+          <p className="text-sm text-blue-800">
+            {reportType === 'outstanding' && `Includes ${outstandingMembers.length} members with outstanding balances totaling $${(memberStats?.totalOutstanding || 0).toFixed(2)}`}
+            {reportType === 'all-members' && `Includes all ${memberStats?.total || 0} members (active and inactive) with complete contact and membership details`}
+            {reportType === 'active-members' && `Includes ${memberStats?.active || 0} active members with current membership status and balance information`}
+            {reportType === 'payments' && `Includes ${paymentStats?.totalCount || 0} payments totaling $${(paymentStats?.totalAmount || 0).toFixed(2)} for the year ${selectedYear}`}
+          </p>
+          <div className="mt-3 text-xs text-blue-700">
+            <strong>Fields included:</strong>
+            {reportType === 'outstanding' && ' Member Name, Email, Phone, Category, Amount Owed'}
+            {reportType === 'all-members' && ' Member Name, Email, Phone, Category, Status, Balance, Date Joined'}
+            {reportType === 'active-members' && ' Member Name, Email, Phone, Category, Balance, Date Joined'}
+            {reportType === 'payments' && ' Date, Receipt #, Member, Amount, Payment Method, Reference, Recorded By'}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Member Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount Owed
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedOutstanding.map(member => {
-                  const category = categories.find(c => c.id === member.membershipCategory)
-                  const amountOwed = Math.abs(member.accountBalance)
-                  return (
-                    <tr key={member.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                          to={`/members/${member.id}`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-900"
-                        >
-                          {member.fullName}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {category?.name || member.membershipCategory}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {member.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
-                        ${amountOwed.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link
-                          to={`/payments?member=${member.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Record Payment
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot className="bg-gray-50">
-                <tr>
-                  <td colSpan="3" className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    Total Outstanding:
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-red-600">
-                    ${(memberStats?.totalOutstanding || 0).toFixed(2)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Monthly Payment Breakdown */}

@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMemberStats, getMembersWithOutstandingBalance } from '../services/membersService'
-import { getAllPayments } from '../services/paymentsService'
 import { getAllCategories, getCategoryById } from '../services/membershipCategories'
+import { getAllPayments } from '../services/paymentsService'
 
 const Dashboard = () => {
   const { checkPermission, ROLES } = useAuth()
   const [stats, setStats] = useState(null)
-  const [recentPayments, setRecentPayments] = useState([])
   const [outstandingMembers, setOutstandingMembers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [categories, setCategories] = useState([])
+  const [totalPaid, setTotalPaid] = useState(0)
 
   const canEdit = checkPermission(ROLES.EDIT)
 
@@ -24,17 +24,20 @@ const Dashboard = () => {
       setIsLoading(true)
 
       // Fetch all data in parallel
-      const [memberStats, payments, outstanding, cats] = await Promise.all([
+      const [memberStats, outstanding, cats, payments] = await Promise.all([
         getMemberStats(),
-        getAllPayments(),
         getMembersWithOutstandingBalance(),
-        getAllCategories()
+        getAllCategories(),
+        getAllPayments()
       ])
 
       setStats(memberStats)
-      setRecentPayments(payments.slice(0, 10)) // Last 10 payments
       setOutstandingMembers(outstanding.slice(0, 5)) // Top 5 outstanding
       setCategories(cats)
+
+      // Calculate total amount paid
+      const total = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+      setTotalPaid(total)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -96,13 +99,15 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Payments */}
+        {/* Active Members */}
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Recent Payments</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{recentPayments.length}</p>
-              <p className="text-sm text-gray-500 mt-1">Last 10 transactions</p>
+              <p className="text-sm font-medium text-gray-600">Active Members</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{stats?.active || 0}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {stats?.total ? ((stats.active / stats.total * 100).toFixed(1)) : 0}% of total
+              </p>
             </div>
             <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
               <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,88 +148,195 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Top Outstanding Balances */}
+        {/* Paid vs Unpaid Overview */}
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Top Outstanding Balances</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Payment Status Overview</h2>
             <Link to="/reports" className="text-sm text-blue-600 hover:text-blue-900">
-              View All
+              View Details
             </Link>
           </div>
-          {outstandingMembers.length === 0 ? (
-            <p className="text-gray-600">All members are paid up!</p>
-          ) : (
-            <div className="space-y-3">
-              {outstandingMembers.map(member => (
-                <div key={member.id} className="flex justify-between items-center p-3 bg-red-50 rounded-md">
-                  <div>
-                    <Link
-                      to={`/members/${member.id}`}
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                    >
-                      {member.fullName}
-                    </Link>
-                    <p className="text-xs text-gray-500">
-                      {categories.find(c => c.id === member.membershipCategory)?.name}
+          {(() => {
+            const unpaidMembers = stats?.active - outstandingMembers.length || 0
+            const paidMembers = outstandingMembers.length || 0
+            const totalActive = stats?.active || 0
+            const paidPercentage = totalActive > 0 ? (paidMembers / totalActive * 100).toFixed(1) : 0
+            const unpaidPercentage = totalActive > 0 ? (unpaidMembers / totalActive * 100).toFixed(1) : 0
+
+            return (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-green-700">Paid Up</span>
+                      <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-green-700">{paidMembers}</p>
+                    <p className="text-xs text-green-600 mt-1">{paidPercentage}% of active members</p>
+                    <p className="text-sm font-medium text-green-700 mt-2">
+                      ${totalPaid.toFixed(2)} paid
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-red-600">
-                    ${(member.accountBalance || 0).toFixed(2)}
-                  </span>
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-red-700">Outstanding</span>
+                      <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-red-700">{unpaidMembers}</p>
+                    <p className="text-xs text-red-600 mt-1">{unpaidPercentage}% of active members</p>
+                    <p className="text-sm font-medium text-red-700 mt-2">
+                      ${(stats?.totalOutstanding || 0).toFixed(2)} owed
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Visual Bar Chart */}
+                <div>
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                    <span>Payment Distribution</span>
+                    <span>{totalActive} active members</span>
+                  </div>
+                  <div className="w-full h-8 bg-gray-200 rounded-full overflow-hidden flex">
+                    {paidMembers > 0 && (
+                      <div
+                        className="bg-green-500 flex items-center justify-center text-white text-xs font-medium"
+                        style={{ width: `${paidPercentage}%` }}
+                      >
+                        {paidPercentage > 15 && `${paidPercentage}%`}
+                      </div>
+                    )}
+                    {unpaidMembers > 0 && (
+                      <div
+                        className="bg-red-500 flex items-center justify-center text-white text-xs font-medium"
+                        style={{ width: `${unpaidPercentage}%` }}
+                      >
+                        {unpaidPercentage > 15 && `${unpaidPercentage}%`}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-gray-500">
+                    <span className="flex items-center">
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                      Paid
+                    </span>
+                    <span className="flex items-center">
+                      <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                      Outstanding
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                {unpaidMembers > 0 && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Amount Owed:</span>
+                      <span className="font-bold text-red-600">${(stats?.totalOutstanding || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
-      {/* Recent Payments Activity */}
+      {/* Active vs Inactive Members */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Payments</h2>
-          <Link to="/payments" className="text-sm text-blue-600 hover:text-blue-900">
-            View All
+          <h2 className="text-lg font-semibold text-gray-900">Member Status Overview</h2>
+          <Link to="/members" className="text-sm text-blue-600 hover:text-blue-900">
+            View All Members
           </Link>
         </div>
-        {recentPayments.length === 0 ? (
-          <p className="text-gray-600">No payments recorded yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receipt</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentPayments.map(payment => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {payment.paymentDate}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/members/${payment.memberId}`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        {payment.memberName}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                      ${payment.amount.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {payment.receiptNumber}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {(() => {
+          const activeMembers = stats?.active || 0
+          const inactiveMembers = stats?.inactive || 0
+          const totalMembers = stats?.total || 0
+          const activePercentage = totalMembers > 0 ? (activeMembers / totalMembers * 100).toFixed(1) : 0
+          const inactivePercentage = totalMembers > 0 ? (inactiveMembers / totalMembers * 100).toFixed(1) : 0
+
+          return (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-700">Active Members</span>
+                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-3xl font-bold text-blue-700">{activeMembers}</p>
+                  <p className="text-xs text-blue-600 mt-1">{activePercentage}% of total members</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Inactive Members</span>
+                    <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-700">{inactiveMembers}</p>
+                  <p className="text-xs text-gray-600 mt-1">{inactivePercentage}% of total members</p>
+                </div>
+              </div>
+
+              {/* Visual Bar Chart */}
+              <div>
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                  <span>Membership Distribution</span>
+                  <span>{totalMembers} total members</span>
+                </div>
+                <div className="w-full h-8 bg-gray-200 rounded-full overflow-hidden flex">
+                  {activeMembers > 0 && (
+                    <div
+                      className="bg-blue-500 flex items-center justify-center text-white text-xs font-medium"
+                      style={{ width: `${activePercentage}%` }}
+                    >
+                      {activePercentage > 15 && `${activePercentage}%`}
+                    </div>
+                  )}
+                  {inactiveMembers > 0 && (
+                    <div
+                      className="bg-gray-400 flex items-center justify-center text-white text-xs font-medium"
+                      style={{ width: `${inactivePercentage}%` }}
+                    >
+                      {inactivePercentage > 15 && `${inactivePercentage}%`}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between mt-2 text-xs text-gray-500">
+                  <span className="flex items-center">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+                    Active
+                  </span>
+                  <span className="flex items-center">
+                    <span className="w-3 h-3 bg-gray-400 rounded-full mr-1"></span>
+                    Inactive
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="pt-4 border-t border-gray-200 grid grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Active Rate:</span>
+                  <span className="font-bold text-blue-600">{activePercentage}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Members:</span>
+                  <span className="font-bold text-gray-900">{totalMembers}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Quick Actions */}

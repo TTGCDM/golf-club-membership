@@ -143,7 +143,35 @@ Hosting URL: https://tea-tree-golf-club.web.app
 
 ## Step 5: Configure Automated Backups
 
-### 5.1 Enable Daily Backups in Firebase Console
+**NEW in v1.1.0**: The Admin panel now includes a one-click backup export feature. Super Admins can download complete JSON backups directly from the System Administration page. This provides an additional backup layer alongside Firebase's automated backups.
+
+### 5.1 In-App Manual Backups (Recommended for Quick Backups)
+
+The easiest way to create a backup is directly from the application:
+
+1. Log in as a Super Admin
+2. Navigate to **System Administration** page
+3. Scroll to **Data Backup & Export** section
+4. Click **"Download Backup (JSON)"**
+5. Save the JSON file to a secure location (cloud storage, external drive)
+
+**Best practices:**
+- Download a backup before making major changes (fee applications, bulk imports, etc.)
+- Schedule weekly manual backups
+- Store backups in multiple locations (local + cloud)
+- Keep backups for at least 3 months
+
+**What's included:**
+- All members with complete details
+- All payment records
+- All fee records
+- All users (with roles and status)
+- All membership categories
+- Metadata (export date, version, counts)
+
+### 5.2 Enable Daily Backups in Firebase Console
+
+For automated backups managed by Firebase:
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Select your project
@@ -152,7 +180,7 @@ Hosting URL: https://tea-tree-golf-club.web.app
 5. Scroll to "Daily backups" section
 6. Click **"Get started"** or **"Enable"**
 
-### 5.2 Configure Backup Settings
+### 5.3 Configure Backup Settings
 
 1. **Backup frequency**: Daily (automatically at a random time each day)
 2. **Backup retention**: Choose retention period:
@@ -161,7 +189,7 @@ Hosting URL: https://tea-tree-golf-club.web.app
    - 30 days (for compliance requirements)
 3. **Backup location**: Choose same region as your Firestore database for optimal performance
 
-### 5.3 Set Up Export to Cloud Storage (Alternative/Additional)
+### 5.4 Set Up Export to Cloud Storage (Alternative/Additional)
 
 For more control over backups:
 
@@ -187,7 +215,7 @@ gcloud firestore export gs://tea-tree-golf-club-backups/$(date +%Y-%m-%d)
    - URL: Use Firestore export API endpoint
    - HTTP method: POST
 
-### 5.4 Test Backup Restore (Important!)
+### 5.5 Test Backup Restore (Important!)
 
 **Test your backup immediately after setup:**
 
@@ -198,7 +226,7 @@ gcloud firestore export gs://tea-tree-golf-club-backups/$(date +%Y-%m-%d)
 5. Verify export completed successfully
 6. Try restoring to a test project to confirm backups are valid
 
-### 5.5 Document Restore Procedure
+### 5.6 Document Restore Procedure
 
 **To restore from backup:**
 

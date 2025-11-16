@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { clearAllData, getDataStats } from '../services/adminService'
+import { clearAllData, getDataStats, exportAllData, downloadJSONBackup } from '../services/adminService'
 import { importMembersFromCSV } from '../services/membersService'
 import CategoryManager from '../components/CategoryManager'
 import FeeApplication from '../components/FeeApplication'
@@ -19,6 +19,9 @@ const Admin = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadResults, setUploadResults] = useState(null)
   const [showUploadResults, setShowUploadResults] = useState(false)
+
+  // Backup export state
+  const [isExporting, setIsExporting] = useState(false)
 
   const { checkPermission, ROLES, currentUser } = useAuth()
   const navigate = useNavigate()
@@ -159,6 +162,28 @@ const Admin = () => {
     setUploadResults(null)
   }
 
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true)
+      setError(null)
+      setSuccess(null)
+
+      // Export all data
+      const data = await exportAllData()
+
+      // Download as JSON file
+      const filename = `teatree-backup-${new Date().toISOString().split('T')[0]}.json`
+      downloadJSONBackup(data, filename)
+
+      setSuccess(`Backup downloaded successfully! (${data.counts.members} members, ${data.counts.payments} payments, ${data.counts.users} users)`)
+    } catch (err) {
+      console.error('Error exporting data:', err)
+      setError('Failed to export data: ' + err.message)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   if (!checkPermission(ROLES.SUPER_ADMIN)) {
     return null
   }
@@ -203,6 +228,69 @@ const Admin = () => {
         </button>
       </div>
 
+      {/* Data Backup Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          Data Backup & Export
+        </h2>
+
+        <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-2">Export Database Backup</h3>
+          <p className="text-sm text-gray-700 mb-3">
+            Download a complete backup of all data as a JSON file. This includes all members, payments, fees, users, and membership categories.
+          </p>
+          <ul className="text-sm text-gray-600 mb-4 list-disc list-inside space-y-1">
+            <li>Creates a timestamped JSON file with all database collections</li>
+            <li>Useful for manual backups before major changes</li>
+            <li>Can be used for data migration or recovery</li>
+            <li>Recommended: Download weekly backups and store securely</li>
+          </ul>
+
+          <button
+            onClick={handleExportData}
+            disabled={isExporting}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {isExporting ? 'Exporting...' : 'Download Backup (JSON)'}
+          </button>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
+          <h3 className="font-semibold text-gray-900 mb-2 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Backup Best Practices
+          </h3>
+          <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+            <li><strong>Regular backups:</strong> Download backups weekly or before major changes</li>
+            <li><strong>Secure storage:</strong> Store backup files in a secure location (cloud storage, external drive)</li>
+            <li><strong>Firebase backups:</strong> Enable automated daily backups in Firebase Console (see DEPLOYMENT.md)</li>
+            <li><strong>Test restores:</strong> Periodically verify backups can be restored successfully</li>
+            <li><strong>Before deployment:</strong> Always create a backup before deploying to production</li>
+          </ul>
+        </div>
+
+        {/* Success/Error Messages */}
+        {success && (
+          <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">
+            {success}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+      </div>
+
       {/* CSV Upload Section */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
@@ -215,16 +303,35 @@ const Admin = () => {
         <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
           <h3 className="font-semibold text-gray-900 mb-2">Upload Member Data</h3>
           <p className="text-sm text-gray-700 mb-3">
-            Upload a CSV file containing member details. The file must match the export format with these columns:
+            Upload a CSV file with member details. CSV must have 11 columns in this order:
           </p>
           <p className="text-xs font-mono bg-white p-2 rounded mb-3 overflow-x-auto">
             Full Name, Email, Phone, Address, Date of Birth, Golf Australia ID, Membership Category, Status, Account Balance, Date Joined, Emergency Contact
           </p>
+
+          <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
+            <p className="text-sm font-semibold text-green-900 mb-1">✅ Required Fields (only 2!):</p>
+            <ul className="text-sm text-green-800 list-disc list-inside ml-2">
+              <li><strong>Full Name</strong> - Member's name</li>
+              <li><strong>Golf Australia ID</strong> - Unique identifier</li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-3">
+            <p className="text-sm font-semibold text-yellow-900 mb-1">📋 Membership Category Options:</p>
+            <ul className="text-sm text-yellow-800 list-disc list-inside ml-2 space-y-1">
+              <li>Leave <strong>blank</strong> → Auto-determined from Date of Birth (or defaults to "Full Membership")</li>
+              <li>Or use one of these names: <code className="bg-white px-1 rounded">Junior 10-12 years</code>, <code className="bg-white px-1 rounded">Junior 13-15 years</code>, <code className="bg-white px-1 rounded">Junior 16-18 years</code>, <code className="bg-white px-1 rounded">Colts</code>, <code className="bg-white px-1 rounded">Full Membership</code>, <code className="bg-white px-1 rounded">Senior Full Membership</code>, <code className="bg-white px-1 rounded">Life & Honorary Members</code>, <code className="bg-white px-1 rounded">Non-playing/Social</code></li>
+            </ul>
+          </div>
+
           <ul className="text-sm text-gray-600 mb-3 list-disc list-inside space-y-1">
+            <li><strong>All other fields are optional</strong> - can be left blank</li>
             <li>Duplicate emails or Golf Australia IDs will be skipped</li>
-            <li>Invalid rows will be skipped and reported</li>
-            <li>Empty text fields remain blank, empty numbers default to 0</li>
-            <li>Date of Birth format: YYYY-MM-DD</li>
+            <li>Empty text fields default to blank, empty numbers default to 0</li>
+            <li>Date of Birth format (if provided): YYYY-MM-DD</li>
+            <li>Status defaults to "active" if not specified</li>
+            <li>Date Joined defaults to today if not specified</li>
           </ul>
 
           <div className="flex items-center space-x-4">

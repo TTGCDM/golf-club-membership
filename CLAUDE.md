@@ -354,5 +354,55 @@ if (!checkPermission(ROLES.EDIT)) {
 ---
 
 **Project**: Tea Tree Golf Club Membership Management System
-**Version**: 1.0.0 (Production-ready, not yet deployed)
+**Version**: 1.2.0 (Production - Deployed)
 **Last Updated**: November 2025
+
+---
+
+## Version History
+
+### v1.2.0 - Enhanced UX & Reporting (Current)
+**Deployed**: November 2025
+
+**New Features**:
+- **Payment Form Enhancements**:
+  - Auto-fills payment amount with member's outstanding balance
+  - Disabled browser autocomplete for member search field
+
+- **Dashboard Improvements**:
+  - Replaced "Top Outstanding Balances" list with Payment Status Overview chart
+  - Added Active vs Inactive Members chart with visual distribution
+  - Added total dollar amounts to payment status cards
+  - Shows total amount paid and total amount owed
+
+- **Payments Page**:
+  - Added sortable columns (click headers to sort by any column)
+  - Sort by: Receipt #, Date, Member, Amount, Method, Reference, Recorded By
+  - Visual indicators for ascending/descending sort
+
+- **Reports Page - Report Builder**:
+  - Replaced single Outstanding Payments report with flexible Report Builder
+  - **Report Types**: Outstanding Payments, All Members, Active Members, Payment History
+  - **Export Formats**: CSV (Excel-compatible) or PDF with professional formatting
+  - Smart descriptions showing record counts and totals
+  - Field previews before generating
+  - Multi-page PDF support with headers and footers
+
+**Bug Fixes**:
+- Fixed FeeApplication component using incorrect auth context variable (user vs currentUser)
+- Corrected Payment Status Overview labels (paid/unpaid were reversed)
+
+### v1.1.0 - Advanced Admin Features
+**Deployed**: November 2025
+- Dynamic membership categories
+- Annual fee application system
+- Fee management and preview
+- Category-based fee calculation
+
+### v1.0.0 - Initial Production Release
+**Deployed**: November 2025
+- Core membership management
+- Payment recording and tracking
+- Role-based access control
+- CSV import/export
+- PDF receipt generation

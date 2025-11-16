@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { updateMember, getMemberById } from './membersService'
+import jsPDF from 'jspdf'
 
 const PAYMENTS_COLLECTION = 'payments'
 const SETTINGS_COLLECTION = 'systemSettings'
@@ -327,4 +328,195 @@ export const formatPaymentMethod = (method) => {
     cash: 'Cash'
   }
   return methods[method] || method
+}
+
+// Generate PDF receipt for a payment
+export const generatePDFReceipt = async (payment) => {
+  try {
+    // Get member details
+    const member = await getMemberById(payment.memberId)
+
+    // Create new PDF document
+    const doc = new jsPDF()
+
+    // Set up colors and fonts
+    const primaryColor = [41, 128, 185] // Blue
+    const textColor = [44, 62, 80] // Dark gray
+
+    // Header - Club Name
+    doc.setFontSize(24)
+    doc.setTextColor(...primaryColor)
+    doc.text('Tea Tree Golf Club', 105, 20, { align: 'center' })
+
+    // Subtitle
+    doc.setFontSize(12)
+    doc.setTextColor(...textColor)
+    doc.text('Payment Receipt', 105, 30, { align: 'center' })
+
+    // Horizontal line
+    doc.setDrawColor(...primaryColor)
+    doc.setLineWidth(0.5)
+    doc.line(20, 35, 190, 35)
+
+    // Receipt Details Header
+    doc.setFontSize(16)
+    doc.setTextColor(...primaryColor)
+    doc.text('Receipt Details', 20, 50)
+
+    // Receipt information
+    doc.setFontSize(11)
+    doc.setTextColor(...textColor)
+
+    let yPos = 60
+    const lineHeight = 7
+
+    // Receipt Number
+    doc.setFont(undefined, 'bold')
+    doc.text('Receipt Number:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(payment.receiptNumber || 'N/A', 70, yPos)
+
+    yPos += lineHeight
+
+    // Payment Date
+    doc.setFont(undefined, 'bold')
+    doc.text('Payment Date:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(payment.paymentDate, 70, yPos)
+
+    yPos += lineHeight
+
+    // Payment Method
+    doc.setFont(undefined, 'bold')
+    doc.text('Payment Method:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(formatPaymentMethod(payment.paymentMethod), 70, yPos)
+
+    yPos += lineHeight
+
+    // Reference
+    if (payment.reference) {
+      doc.setFont(undefined, 'bold')
+      doc.text('Reference:', 20, yPos)
+      doc.setFont(undefined, 'normal')
+      doc.text(payment.reference, 70, yPos)
+      yPos += lineHeight
+    }
+
+    // Amount - Highlighted
+    yPos += 5
+    doc.setFillColor(240, 248, 255) // Light blue background
+    doc.roundedRect(20, yPos - 5, 170, 12, 2, 2, 'F')
+    doc.setFontSize(14)
+    doc.setFont(undefined, 'bold')
+    doc.text('Amount Paid:', 25, yPos + 3)
+    doc.setTextColor(46, 125, 50) // Green for amount
+    doc.text(`$${payment.amount.toFixed(2)}`, 70, yPos + 3)
+    doc.setTextColor(...textColor)
+
+    // Member Details Header
+    yPos += 25
+    doc.setFontSize(16)
+    doc.setTextColor(...primaryColor)
+    doc.text('Member Information', 20, yPos)
+
+    yPos += 10
+    doc.setFontSize(11)
+    doc.setTextColor(...textColor)
+
+    // Member Name
+    doc.setFont(undefined, 'bold')
+    doc.text('Name:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(payment.memberName || member.fullName, 70, yPos)
+
+    yPos += lineHeight
+
+    // Email
+    doc.setFont(undefined, 'bold')
+    doc.text('Email:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(member.email || 'N/A', 70, yPos)
+
+    yPos += lineHeight
+
+    // Phone
+    if (member.phone) {
+      doc.setFont(undefined, 'bold')
+      doc.text('Phone:', 20, yPos)
+      doc.setFont(undefined, 'normal')
+      doc.text(member.phone, 70, yPos)
+      yPos += lineHeight
+    }
+
+    // Golf Australia ID
+    if (member.golfAustraliaId) {
+      doc.setFont(undefined, 'bold')
+      doc.text('Golf Australia ID:', 20, yPos)
+      doc.setFont(undefined, 'normal')
+      doc.text(member.golfAustraliaId, 70, yPos)
+      yPos += lineHeight
+    }
+
+    // Membership Category
+    doc.setFont(undefined, 'bold')
+    doc.text('Membership:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    doc.text(member.membershipCategory || 'N/A', 70, yPos)
+
+    yPos += lineHeight
+
+    // Current Balance
+    doc.setFont(undefined, 'bold')
+    doc.text('Current Balance:', 20, yPos)
+    doc.setFont(undefined, 'normal')
+    const balanceColor = member.accountBalance >= 0 ? [46, 125, 50] : [211, 47, 47]
+    doc.setTextColor(...balanceColor)
+    doc.text(`$${(member.accountBalance || 0).toFixed(2)}`, 70, yPos)
+    doc.setTextColor(...textColor)
+
+    // Notes section
+    if (payment.notes) {
+      yPos += 15
+      doc.setFontSize(16)
+      doc.setTextColor(...primaryColor)
+      doc.text('Notes', 20, yPos)
+
+      yPos += 10
+      doc.setFontSize(11)
+      doc.setTextColor(...textColor)
+      doc.setFont(undefined, 'normal')
+
+      // Split notes into multiple lines if too long
+      const notesLines = doc.splitTextToSize(payment.notes, 170)
+      doc.text(notesLines, 20, yPos)
+      yPos += notesLines.length * lineHeight
+    }
+
+    // Footer
+    const footerY = 270
+    doc.setDrawColor(...primaryColor)
+    doc.setLineWidth(0.5)
+    doc.line(20, footerY, 190, footerY)
+
+    doc.setFontSize(9)
+    doc.setTextColor(128, 128, 128)
+    doc.text('Tea Tree Golf Club', 105, footerY + 7, { align: 'center' })
+    doc.text('Thank you for your payment!', 105, footerY + 12, { align: 'center' })
+
+    // Add timestamp
+    const now = new Date()
+    const timestamp = `Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`
+    doc.setFontSize(8)
+    doc.text(timestamp, 105, footerY + 20, { align: 'center' })
+
+    // Save the PDF
+    const fileName = `Receipt-${payment.receiptNumber || payment.id}.pdf`
+    doc.save(fileName)
+
+    return true
+  } catch (error) {
+    console.error('Error generating PDF receipt:', error)
+    throw error
+  }
 }

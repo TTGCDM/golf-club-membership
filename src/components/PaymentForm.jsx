@@ -37,10 +37,19 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
   useEffect(() => {
     if (preSelectedMember && !payment) {
       setSelectedMember(preSelectedMember)
+
+      // Calculate default payment amount
+      // If member has negative balance (owes money), suggest paying the full amount
+      // If member has positive balance (credit), default to empty
+      const defaultAmount = preSelectedMember.accountBalance < 0
+        ? Math.abs(preSelectedMember.accountBalance).toFixed(2)
+        : ''
+
       setFormData(prev => ({
         ...prev,
         memberId: preSelectedMember.id,
-        memberName: preSelectedMember.fullName
+        memberName: preSelectedMember.fullName,
+        amount: defaultAmount
       }))
       setMemberSearch(preSelectedMember.fullName)
     }
@@ -69,10 +78,19 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
 
   const handleMemberSelect = (member) => {
     setSelectedMember(member)
+
+    // Calculate default payment amount
+    // If member has negative balance (owes money), suggest paying the full amount
+    // If member has positive balance (credit), default to 0
+    const defaultAmount = member.accountBalance < 0
+      ? Math.abs(member.accountBalance).toFixed(2)
+      : ''
+
     setFormData(prev => ({
       ...prev,
       memberId: member.id,
-      memberName: member.fullName
+      memberName: member.fullName,
+      amount: defaultAmount
     }))
     setMemberSearch(member.fullName)
     setShowResults(false)
@@ -109,6 +127,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               onChange={(e) => setMemberSearch(e.target.value)}
               placeholder="Search by name, email, or Golf Australia ID..."
               disabled={!!payment || !!preSelectedMember}
+              autoComplete="off"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
             />

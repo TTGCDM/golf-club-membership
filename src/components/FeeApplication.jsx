@@ -4,7 +4,7 @@ import { getAllCategories } from '../services/categoryService'
 import { previewFeeApplication, applyAnnualFees } from '../services/feeService'
 
 const FeeApplication = () => {
-  const { user } = useAuth()
+  const { currentUser } = useAuth()
   const [categories, setCategories] = useState([])
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [categoryFees, setCategoryFees] = useState({}) // Override fees
@@ -84,7 +84,7 @@ const FeeApplication = () => {
       setError(null)
       setSuccess(null)
 
-      const applyResults = await applyAnnualFees(selectedYear, categoryFees, user.uid)
+      const applyResults = await applyAnnualFees(selectedYear, categoryFees, currentUser.uid)
       setResults(applyResults)
       setShowResults(true)
       setPreview(null) // Clear preview after application

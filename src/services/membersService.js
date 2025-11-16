@@ -20,14 +20,60 @@ const MEMBERS_COLLECTION = 'members'
 // Create a new member
 export const createMember = async (memberData) => {
   try {
+    // Provide defaults for optional fields
+    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+
+    // Get all categories for lookup
+    const { getAllCategories } = await import('./categoryService')
+    const categories = await getAllCategories()
+
     // Auto-determine category based on date of birth if not provided
-    const category = memberData.membershipCategory || await determineCategoryByAge(memberData.dateOfBirth)
+    let category = memberData.membershipCategory || ''
+
+    if (!category || category.trim() === '') {
+      if (memberData.dateOfBirth && memberData.dateOfBirth.trim() !== '') {
+        // Determine category from date of birth
+        category = await determineCategoryByAge(memberData.dateOfBirth)
+      } else {
+        // If no DOB provided, get the default "Full Membership" category ID
+        const defaultCategory = categories.find(c => c.name.includes('Full Membership'))
+        category = defaultCategory ? defaultCategory.id : (categories[0]?.id || '')
+      }
+    } else {
+      // Check if the provided category is a NAME (not an ID)
+      // If it's not a valid ID, try to find category by name
+      const categoryExists = categories.some(c => c.id === category)
+
+      if (!categoryExists) {
+        // Try to find category by name
+        const categoryByName = categories.find(c =>
+          c.name.toLowerCase() === category.toLowerCase()
+        )
+
+        if (categoryByName) {
+          category = categoryByName.id
+        } else {
+          // If no exact match, try partial match
+          const partialMatch = categories.find(c =>
+            c.name.toLowerCase().includes(category.toLowerCase())
+          )
+          category = partialMatch ? partialMatch.id : (categories[0]?.id || '')
+        }
+      }
+    }
 
     const newMember = {
-      ...memberData,
+      fullName: memberData.fullName || '',
+      email: memberData.email || '',
+      phone: memberData.phone || '',
+      address: memberData.address || '',
+      dateOfBirth: memberData.dateOfBirth || '',
+      golfAustraliaId: memberData.golfAustraliaId || '',
       membershipCategory: category,
       accountBalance: memberData.accountBalance || 0,
-      status: memberData.status || 'active',
+      status: (memberData.status && memberData.status.trim() !== '') ? memberData.status.toLowerCase() : 'active',
+      dateJoined: (memberData.dateJoined && memberData.dateJoined.trim() !== '') ? memberData.dateJoined : today,
+      emergencyContact: memberData.emergencyContact || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
@@ -387,21 +433,26 @@ const validateMemberData = (member) => {
     return { valid: false, error: 'Full Name is required' }
   }
 
-  // Validate Date of Birth format (YYYY-MM-DD)
-  if (member.dateOfBirth) {
+  // Golf Australia ID is required
+  if (!member.golfAustraliaId || member.golfAustraliaId.trim() === '') {
+    return { valid: false, error: 'Golf Australia ID is required' }
+  }
+
+  // Validate Date of Birth format (YYYY-MM-DD) if provided
+  if (member.dateOfBirth && member.dateOfBirth.trim() !== '') {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(member.dateOfBirth)) {
       return { valid: false, error: 'Invalid Date of Birth format (use YYYY-MM-DD)' }
     }
   }
 
-  // Validate status
-  if (member.status && !['active', 'inactive'].includes(member.status.toLowerCase())) {
+  // Validate status if provided
+  if (member.status && member.status.trim() !== '' && !['active', 'inactive'].includes(member.status.toLowerCase())) {
     return { valid: false, error: 'Invalid Status (must be "active" or "inactive")' }
   }
 
-  // Validate account balance
-  if (isNaN(member.accountBalance)) {
+  // Validate account balance if provided
+  if (member.accountBalance && isNaN(member.accountBalance)) {
     return { valid: false, error: 'Invalid Account Balance (must be a number)' }
   }
 
