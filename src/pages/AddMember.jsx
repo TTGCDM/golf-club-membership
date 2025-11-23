@@ -30,8 +30,8 @@ const AddMember = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Add New Member</h1>
-        <p className="text-gray-600 mt-2">Enter the member's information below</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Add New Member</h1>
+        <p className="text-gray-600 mb-6">Enter the member&apos;s details below.</p>
       </div>
 
       {error && (

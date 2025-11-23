@@ -9,7 +9,6 @@ import {
   query,
   where,
   orderBy,
-  Timestamp,
   serverTimestamp
 } from 'firebase/firestore'
 import { db } from '../firebase'

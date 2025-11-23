@@ -3,23 +3,19 @@ import {
   doc,
   getDoc,
   getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
   limit,
-  Timestamp,
   serverTimestamp,
   runTransaction
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { updateMember, getMemberById } from './membersService'
+import { getMemberById } from './membersService'
 import jsPDF from 'jspdf'
 
 const PAYMENTS_COLLECTION = 'payments'
-const SETTINGS_COLLECTION = 'systemSettings'
+
 
 // Generate receipt number (format: R2025-001)
 export const generateReceiptNumber = async (year = new Date().getFullYear()) => {

@@ -1,9 +1,8 @@
+
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
-  addDoc,
   query,
   where,
   runTransaction,
@@ -180,7 +179,7 @@ export const applyAnnualFees = async (year, categoryFees = {}, userId) => {
             amount: feeAmount,
             appliedDate: new Date().toISOString().split('T')[0],
             appliedBy: userId,
-            notes: `${year} Annual Membership Fee - ${category.name}`,
+            notes: `${year} Annual Membership Fee - ${category.name} `,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           })

@@ -60,15 +60,15 @@ const Login = () => {
 
   if (showResetPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
         <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
+            <h1 className="text-2xl font-bold text-ocean-navy">Reset Password</h1>
             <p className="text-gray-600 mt-2">Enter your email to receive a password reset link</p>
           </div>
 
           {resetSuccess && (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            <div className="bg-ocean-seafoam bg-opacity-30 border border-ocean-teal text-ocean-navy px-4 py-3 rounded mb-4">
               Password reset email sent! Check your inbox.
             </div>
           )}
@@ -90,14 +90,14 @@ const Login = () => {
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
                 placeholder="your.email@example.com"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ocean-teal hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal"
             >
               Send Reset Link
             </button>
@@ -105,7 +105,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setShowResetPassword(false)}
-              className="w-full text-center text-sm text-gray-600 hover:text-gray-900"
+              className="w-full text-center text-sm text-gray-600 hover:text-ocean-navy"
             >
               Back to Login
             </button>
@@ -116,10 +116,10 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Tea Tree Golf Club</h1>
+          <h1 className="text-3xl font-bold text-ocean-navy">Tea Tree Golf Club</h1>
           <p className="text-gray-600 mt-2">Membership Management System</p>
         </div>
 
@@ -140,7 +140,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
               placeholder="admin@teatreegolf.com"
             />
           </div>
@@ -155,7 +155,7 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
               placeholder="••••••••"
             />
           </div>
@@ -163,7 +163,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ocean-teal hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -172,13 +172,13 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setShowResetPassword(true)}
-              className="text-green-600 hover:text-green-700 font-medium"
+              className="text-ocean-teal hover:text-ocean-navy font-medium"
             >
               Forgot password?
             </button>
             <Link
               to="/register"
-              className="text-green-600 hover:text-green-700 font-medium"
+              className="text-ocean-teal hover:text-ocean-navy font-medium"
             >
               Create account
             </Link>

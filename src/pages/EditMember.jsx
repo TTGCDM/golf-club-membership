@@ -68,7 +68,7 @@ const EditMember = () => {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Edit Member</h1>
-        <p className="text-gray-600 mt-2">Update {member.fullName}'s information</p>
+        <p className="text-gray-600 mt-2">Update {member.fullName}&apos;s information</p>
       </div>
 
       {error && (

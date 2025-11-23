@@ -102,7 +102,16 @@ The `firestore.indexes.json` file includes indexes for:
 
 ## Step 4: Build and Deploy to Firebase Hosting
 
-### 4.1 Build Production Bundle
+### 4.1 Verify Code Quality
+
+Before building, ensure all tests pass and code meets quality standards:
+
+```bash
+npm run lint
+npm run test
+```
+
+### 4.2 Build Production Bundle
 
 ```bash
 npm run build

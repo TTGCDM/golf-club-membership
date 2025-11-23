@@ -252,7 +252,7 @@ const Admin = () => {
           <button
             onClick={handleExportData}
             disabled={isExporting}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+            className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -279,7 +279,7 @@ const Admin = () => {
 
         {/* Success/Error Messages */}
         {success && (
-          <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">
+          <div className="mt-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded">
             {success}
           </div>
         )}
@@ -312,7 +312,7 @@ const Admin = () => {
           <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
             <p className="text-sm font-semibold text-green-900 mb-1">✅ Required Fields (only 2!):</p>
             <ul className="text-sm text-green-800 list-disc list-inside ml-2">
-              <li><strong>Full Name</strong> - Member's name</li>
+              <li><strong>Full Name</strong> - Member&apos;s name</li>
               <li><strong>Golf Australia ID</strong> - Unique identifier</li>
             </ul>
           </div>
@@ -320,7 +320,7 @@ const Admin = () => {
           <div className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-3">
             <p className="text-sm font-semibold text-yellow-900 mb-1">📋 Membership Category Options:</p>
             <ul className="text-sm text-yellow-800 list-disc list-inside ml-2 space-y-1">
-              <li>Leave <strong>blank</strong> → Auto-determined from Date of Birth (or defaults to "Full Membership")</li>
+              <li>Leave <strong>blank</strong> → Auto-determined from Date of Birth (or defaults to &quot;Full Membership&quot;)</li>
               <li>Or use one of these names: <code className="bg-white px-1 rounded">Junior 10-12 years</code>, <code className="bg-white px-1 rounded">Junior 13-15 years</code>, <code className="bg-white px-1 rounded">Junior 16-18 years</code>, <code className="bg-white px-1 rounded">Colts</code>, <code className="bg-white px-1 rounded">Full Membership</code>, <code className="bg-white px-1 rounded">Senior Full Membership</code>, <code className="bg-white px-1 rounded">Life & Honorary Members</code>, <code className="bg-white px-1 rounded">Non-playing/Social</code></li>
             </ul>
           </div>
@@ -330,12 +330,12 @@ const Admin = () => {
             <li>Duplicate emails or Golf Australia IDs will be skipped</li>
             <li>Empty text fields default to blank, empty numbers default to 0</li>
             <li>Date of Birth format (if provided): YYYY-MM-DD</li>
-            <li>Status defaults to "active" if not specified</li>
+            <li>Status defaults to &quot;active&quot; if not specified</li>
             <li>Date Joined defaults to today if not specified</li>
           </ul>
 
           <div className="flex items-center space-x-4">
-            <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer transition-colors">
+            <label className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy cursor-pointer transition-colors">
               {isUploading ? 'Uploading...' : 'Choose CSV File'}
               <input
                 type="file"
@@ -353,7 +353,7 @@ const Admin = () => {
 
         {/* Success/Error Messages */}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+          <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
             {success}
           </div>
         )}
@@ -384,9 +384,9 @@ const Admin = () => {
 
         <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
           <h3 className="font-semibold text-gray-900 mb-2">Clear All Data</h3>
-          <p className="text-sm text-gray-700 mb-3">
-            This will permanently delete all members, payments, and users (except your super admin account).
-            <strong className="text-red-600"> This action cannot be undone.</strong>
+          <p className="text-sm text-red-700">
+            <strong>Warning:</strong> This action cannot be undone. This will permanently delete all member records, payments, and fees.
+            Please ensure you have a backup before proceeding.
           </p>
           <p className="text-sm text-gray-600 mb-3">
             Use this function to reset the system for testing or to clear test data before production use.
@@ -403,7 +403,7 @@ const Admin = () => {
 
         {/* Success Message */}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+          <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
             {success}
           </div>
         )}
@@ -530,17 +530,16 @@ const Admin = () => {
                         {uploadResults.details.map((detail, index) => (
                           <tr key={index} className={
                             detail.status === 'success' ? 'bg-green-50' :
-                            detail.status === 'skipped' ? 'bg-yellow-50' :
-                            'bg-red-50'
+                              detail.status === 'skipped' ? 'bg-yellow-50' :
+                                'bg-red-50'
                           }>
                             <td className="px-4 py-2 text-sm text-gray-900">{detail.row}</td>
                             <td className="px-4 py-2 text-sm text-gray-900">{detail.name || '-'}</td>
                             <td className="px-4 py-2 text-sm">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                detail.status === 'success' ? 'bg-green-200 text-green-800' :
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${detail.status === 'success' ? 'bg-green-200 text-green-800' :
                                 detail.status === 'skipped' ? 'bg-yellow-200 text-yellow-800' :
-                                'bg-red-200 text-red-800'
-                              }`}>
+                                  'bg-red-200 text-red-800'
+                                }`}>
                                 {detail.status}
                               </span>
                             </td>
@@ -557,7 +556,7 @@ const Admin = () => {
             <div className="p-6 border-t">
               <button
                 onClick={closeUploadResults}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
               >
                 Close
               </button>

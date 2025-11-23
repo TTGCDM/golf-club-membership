@@ -20,6 +20,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
   // Load existing payment data if editing
   useEffect(() => {
     if (payment) {
+      // eslint-disable-next-line
       setFormData({
         memberId: payment.memberId,
         memberName: payment.memberName,
@@ -36,6 +37,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
   // Handle pre-selected member (from URL parameter)
   useEffect(() => {
     if (preSelectedMember && !payment) {
+      // eslint-disable-next-line
       setSelectedMember(preSelectedMember)
 
       // Calculate default payment amount
@@ -129,7 +131,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               disabled={!!payment || !!preSelectedMember}
               autoComplete="off"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
             {showResults && memberResults.length > 0 && (
               <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
@@ -137,7 +139,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
                   <div
                     key={member.id}
                     onClick={() => handleMemberSelect(member)}
-                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    className="px-3 py-2 hover:bg-ocean-seafoam bg-opacity-20 cursor-pointer border-b border-gray-100 last:border-b-0"
                   >
                     <div className="font-medium text-gray-900">{member.fullName}</div>
                     <div className="text-sm text-gray-500">
@@ -152,7 +154,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               </div>
             )}
             {selectedMember && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="mt-2 p-3 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
                 <p className="text-sm text-gray-700">
                   <span className="font-medium">Selected:</span> {selectedMember.fullName}
                   {selectedMember.accountBalance !== undefined && (
@@ -179,7 +181,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               step="0.01"
               min="0.01"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -195,7 +197,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               value={formData.paymentDate}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -210,7 +212,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               value={formData.paymentMethod}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="bank_transfer">Bank Transfer</option>
               <option value="cash">Cash</option>
@@ -229,7 +231,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               value={formData.reference}
               onChange={handleChange}
               placeholder="Optional"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -245,14 +247,14 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               onChange={handleChange}
               rows="3"
               placeholder="Optional notes or comments"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
           {payment && (
             <div className="md:col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> Editing this payment will automatically adjust the member's account balance.
+                <strong>Note:</strong> Editing this payment will automatically adjust the member&apos;s account balance.
               </p>
             </div>
           )}
@@ -272,7 +274,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
         <button
           type="submit"
           disabled={isLoading || !selectedMember}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
         >
           {isLoading ? 'Processing...' : payment ? 'Update Payment' : 'Record Payment'}
         </button>

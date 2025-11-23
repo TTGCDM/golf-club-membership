@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getAllMembers, searchMembers, downloadMembersCSV } from '../services/membersService'
-import { getAllCategories, getCategoryById } from '../services/membershipCategories'
+import { getAllMembers, downloadMembersCSV } from '../services/membersService'
+import { getAllCategories } from '../services/membershipCategories'
 
 const Members = () => {
   const { checkPermission, ROLES } = useAuth()
@@ -20,10 +20,6 @@ const Members = () => {
     fetchMembers()
   }, [])
 
-  useEffect(() => {
-    applyFilters()
-  }, [members, searchTerm, statusFilter, categoryFilter])
-
   const fetchMembers = async () => {
     try {
       setIsLoading(true)
@@ -40,38 +36,42 @@ const Members = () => {
     }
   }
 
-  const applyFilters = () => {
-    let filtered = [...members]
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...members]
 
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      filtered = filtered.filter(member =>
-        member.fullName?.toLowerCase().includes(searchLower) ||
-        member.email?.toLowerCase().includes(searchLower) ||
-        member.golfAustraliaId?.toLowerCase().includes(searchLower)
-      )
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
+        filtered = filtered.filter(member =>
+          member.fullName?.toLowerCase().includes(searchLower) ||
+          member.email?.toLowerCase().includes(searchLower) ||
+          member.golfAustraliaId?.toLowerCase().includes(searchLower)
+        )
+      }
+
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        filtered = filtered.filter(member => member.status === statusFilter)
+      }
+
+      // Apply category filter
+      if (categoryFilter !== 'all') {
+        filtered = filtered.filter(member => member.membershipCategory === categoryFilter)
+      }
+
+      setFilteredMembers(filtered)
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(member => member.status === statusFilter)
-    }
-
-    // Apply category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(member => member.membershipCategory === categoryFilter)
-    }
-
-    setFilteredMembers(filtered)
-  }
+    applyFilters()
+  }, [members, searchTerm, statusFilter, categoryFilter])
 
   const handleExportCSV = () => {
     downloadMembersCSV(filteredMembers, `members-${new Date().toISOString().split('T')[0]}.csv`)
   }
 
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-green-600' // Positive = credit
+    if (balance > 0) return 'text-ocean-teal' // Positive = credit
     if (balance < 0) return 'text-red-600'   // Negative = owes money
     return 'text-gray-900'
   }
@@ -99,7 +99,7 @@ const Members = () => {
         {canEdit && (
           <Link
             to="/members/add"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
           >
             Add Member
           </Link>
@@ -119,7 +119,7 @@ const Members = () => {
               placeholder="Search by name, email, or Golf Australia ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -131,7 +131,7 @@ const Members = () => {
               id="status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -147,7 +147,7 @@ const Members = () => {
               id="category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="all">All Categories</option>
               {categories.map(cat => (
@@ -215,11 +215,10 @@ const Members = () => {
                       {category?.name || member.membershipCategory}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        member.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active'
+                        ? 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {member.status}
                       </span>
                     </td>
@@ -229,14 +228,14 @@ const Members = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <Link
                         to={`/members/${member.id}`}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        className="text-ocean-teal hover:text-ocean-navy mr-3"
                       >
                         View
                       </Link>
                       {canEdit && (
                         <Link
                           to={`/members/${member.id}/edit`}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-ocean-teal hover:text-ocean-navy"
                         >
                           Edit
                         </Link>

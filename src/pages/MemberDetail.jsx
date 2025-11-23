@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMemberById } from '../services/membersService'
 import { getAllCategories, calculateAge } from '../services/membershipCategories'
@@ -16,7 +16,7 @@ const MemberDetail = () => {
   const [success, setSuccess] = useState(null)
   const [category, setCategory] = useState(null)
   const { id } = useParams()
-  const navigate = useNavigate()
+
 
   const canEdit = checkPermission(ROLES.EDIT)
 
@@ -76,7 +76,7 @@ const MemberDetail = () => {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <p className="text-red-800">{error || 'Member not found'}</p>
         </div>
-        <Link to="/members" className="text-blue-600 hover:text-blue-900 mt-4 inline-block">
+        <Link to="/members" className="text-ocean-teal hover:text-ocean-navy mt-4 inline-block">
           Back to Members
         </Link>
       </div>
@@ -87,7 +87,7 @@ const MemberDetail = () => {
 
   // Helper function to determine balance color
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-green-600' // Positive = credit
+    if (balance > 0) return 'text-ocean-teal' // Positive = credit
     if (balance < 0) return 'text-red-600'   // Negative = owes money
     return 'text-gray-900'
   }
@@ -123,8 +123,8 @@ const MemberDetail = () => {
 
       {/* Success Message */}
       {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-green-800">{success}</p>
+        <div className="mb-4 p-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
+          <p className="text-ocean-teal">{success}</p>
         </div>
       )}
 
@@ -147,7 +147,7 @@ const MemberDetail = () => {
               {canEdit && (
                 <Link
                   to={`/payments?member=${id}`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
                 >
                   Record Payment
                 </Link>
@@ -214,11 +214,10 @@ const MemberDetail = () => {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
                 <dd className="mt-1">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    member.status === 'active'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active'
+                    ? 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
+                    : 'bg-gray-100 text-gray-800'
+                    }`}>
                     {member.status}
                   </span>
                 </dd>
@@ -270,7 +269,7 @@ const MemberDetail = () => {
                         <tr key={`${transaction.type}-${transaction.id || index}`}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
                             {transaction.type === 'payment' ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                              <span className="px-2 py-1 bg-ocean-seafoam bg-opacity-30 text-ocean-teal rounded-full text-xs font-medium">
                                 Payment
                               </span>
                             ) : (
@@ -289,7 +288,7 @@ const MemberDetail = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                             {transaction.type === 'payment' ? (
-                              <span className="text-green-600">+${transaction.amount.toFixed(2)}</span>
+                              <span className="text-ocean-teal">+${transaction.amount.toFixed(2)}</span>
                             ) : (
                               <span className="text-red-600">-${transaction.amount.toFixed(2)}</span>
                             )}
@@ -303,7 +302,7 @@ const MemberDetail = () => {
                             {transaction.type === 'payment' && (
                               <button
                                 onClick={() => handlePrintReceipt(transaction)}
-                                className="text-green-600 hover:text-green-900"
+                                className="text-ocean-teal hover:text-ocean-navy"
                                 title="Print Receipt"
                               >
                                 Print
@@ -321,7 +320,7 @@ const MemberDetail = () => {
                       <p className="text-sm text-gray-600">
                         Payments: <span className="font-medium">{payments.length}</span>
                       </p>
-                      <p className="text-sm text-green-600">
+                      <p className="text-sm text-ocean-teal">
                         Total: <span className="font-medium">
                           +${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                         </span>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+
 import { getMembersWithOutstandingBalance, getMemberStats, downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getPaymentStats, getAllPayments } from '../services/paymentsService'
 import { getAllCategories } from '../services/membershipCategories'
@@ -11,7 +11,7 @@ const Reports = () => {
   const [paymentStats, setPaymentStats] = useState(null)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [isLoading, setIsLoading] = useState(true)
-  const [sortBy, setSortBy] = useState('balance') // 'balance' or 'name'
+
   const [categories, setCategories] = useState([])
 
   // Report Builder State
@@ -20,29 +20,29 @@ const Reports = () => {
   const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
+    const fetchReportData = async () => {
+      try {
+        setIsLoading(true)
+        const [outstanding, stats, payments, cats] = await Promise.all([
+          getMembersWithOutstandingBalance(),
+          getMemberStats(),
+          getPaymentStats(selectedYear),
+          getAllCategories()
+        ])
+
+        setOutstandingMembers(outstanding)
+        setMemberStats(stats)
+        setPaymentStats(payments)
+        setCategories(cats)
+      } catch (error) {
+        console.error('Error fetching report data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     fetchReportData()
   }, [selectedYear])
-
-  const fetchReportData = async () => {
-    try {
-      setIsLoading(true)
-      const [outstanding, stats, payments, cats] = await Promise.all([
-        getMembersWithOutstandingBalance(),
-        getMemberStats(),
-        getPaymentStats(selectedYear),
-        getAllCategories()
-      ])
-
-      setOutstandingMembers(outstanding)
-      setMemberStats(stats)
-      setPaymentStats(payments)
-      setCategories(cats)
-    } catch (error) {
-      console.error('Error fetching report data:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleExportOutstanding = () => {
     downloadMembersCSV(outstandingMembers, `outstanding-payments-${new Date().toISOString().split('T')[0]}.csv`)
@@ -51,16 +51,6 @@ const Reports = () => {
   const handleExportAllMembers = async () => {
     const allMembers = await getAllMembers()
     downloadMembersCSV(allMembers, `all-members-${new Date().toISOString().split('T')[0]}.csv`)
-  }
-
-  const getSortedMembers = () => {
-    const sorted = [...outstandingMembers]
-    if (sortBy === 'balance') {
-      // Sort by most negative (owes most) to least negative
-      return sorted.sort((a, b) => a.accountBalance - b.accountBalance)
-    } else {
-      return sorted.sort((a, b) => a.fullName.localeCompare(b.fullName))
-    }
   }
 
   const generateReport = async () => {
@@ -83,7 +73,7 @@ const Reports = () => {
           title = 'Outstanding Payments Report'
           break
 
-        case 'all-members':
+        case 'all-members': {
           const allMembers = await getAllMembers()
           data = allMembers.map(m => ({
             'Member Name': m.fullName,
@@ -97,8 +87,9 @@ const Reports = () => {
           filename = `all-members-${new Date().toISOString().split('T')[0]}`
           title = 'All Members Report'
           break
+        }
 
-        case 'active-members':
+        case 'active-members': {
           const allActive = await getAllMembers()
           const activeMembers = allActive.filter(m => m.status === 'active')
           data = activeMembers.map(m => ({
@@ -112,8 +103,9 @@ const Reports = () => {
           filename = `active-members-${new Date().toISOString().split('T')[0]}`
           title = 'Active Members Report'
           break
+        }
 
-        case 'payments':
+        case 'payments': {
           const payments = await getAllPayments()
           const yearPayments = payments.filter(p => p.paymentDate && p.paymentDate.startsWith(selectedYear.toString()))
           data = yearPayments.map(p => ({
@@ -128,6 +120,7 @@ const Reports = () => {
           filename = `payments-${selectedYear}-${new Date().toISOString().split('T')[0]}`
           title = `Payment History ${selectedYear}`
           break
+        }
 
         default:
           return
@@ -209,7 +202,7 @@ const Reports = () => {
 
     // Data rows
     doc.setFont(undefined, 'normal')
-    data.forEach((row, rowIndex) => {
+    data.forEach((row) => {
       if (yPosition > pageHeight - 20) {
         doc.addPage()
         yPosition = 20
@@ -253,7 +246,7 @@ const Reports = () => {
     )
   }
 
-  const sortedOutstanding = getSortedMembers()
+
 
   return (
     <div>
@@ -269,7 +262,7 @@ const Reports = () => {
           id="year"
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
         >
           {[2024, 2025, 2026].map(year => (
             <option key={year} value={year}>{year}</option>
@@ -295,7 +288,7 @@ const Reports = () => {
 
         <div className="bg-white shadow rounded-lg p-6">
           <p className="text-sm font-medium text-gray-600">Payments Received ({selectedYear})</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">
+          <p className="text-3xl font-bold text-ocean-teal mt-2">
             ${(paymentStats?.totalAmount || 0).toFixed(2)}
           </p>
           <p className="text-sm text-gray-500 mt-1">{paymentStats?.totalCount || 0} payments</p>
@@ -331,7 +324,7 @@ const Reports = () => {
               id="reportType"
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="outstanding">Outstanding Payments</option>
               <option value="all-members">All Members</option>
@@ -349,7 +342,7 @@ const Reports = () => {
               id="exportFormat"
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="csv">CSV (Excel Compatible)</option>
               <option value="pdf">PDF Document</option>
@@ -364,7 +357,7 @@ const Reports = () => {
             <button
               onClick={generateReport}
               disabled={isGenerating}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isGenerating ? (
                 <>

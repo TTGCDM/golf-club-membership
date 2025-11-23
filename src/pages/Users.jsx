@@ -102,7 +102,7 @@ const Users = () => {
       case ROLES.ADMIN:
         return 'bg-orange-100 text-orange-800'
       case ROLES.EDIT:
-        return 'bg-green-100 text-green-800'
+        return 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
       case ROLES.VIEW:
         return 'bg-blue-100 text-blue-800'
       default:
@@ -130,8 +130,8 @@ const Users = () => {
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-green-800">{success}</p>
+        <div className="mb-4 p-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
+          <p className="text-ocean-teal">{success}</p>
         </div>
       )}
 
@@ -159,7 +159,7 @@ const Users = () => {
                 <div className="flex gap-2">
                   <select
                     onChange={(e) => handleApprove(user.uid, e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                     defaultValue=""
                   >
                     <option value="" disabled>Approve as...</option>
@@ -220,7 +220,7 @@ const Users = () => {
                         <select
                           value={user.role}
                           onChange={(e) => handleChangeRole(user.uid, e.target.value)}
-                          className="px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                         >
                           <option value={ROLES.VIEW}>View</option>
                           <option value={ROLES.EDIT}>Edit</option>
@@ -238,7 +238,7 @@ const Users = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ocean-seafoam bg-opacity-30 text-ocean-teal">
                         Active
                       </span>
                     </td>
@@ -302,7 +302,7 @@ const Users = () => {
                         {canManage && (
                           <button
                             onClick={() => handleReactivate(user.uid)}
-                            className="text-green-600 hover:text-green-900"
+                            className="text-ocean-teal hover:text-ocean-navy"
                           >
                             Reactivate
                           </button>

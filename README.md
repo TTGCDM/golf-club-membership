@@ -82,6 +82,18 @@ The app will open at `http://localhost:5173`
 
 Use the email and password you created in step 4 to login.
 
+### 7. Development Commands
+
+Run linter to check code quality:
+```bash
+npm run lint
+```
+
+Run unit tests:
+```bash
+npm run test
+```
+
 ## Project Structure
 
 ```

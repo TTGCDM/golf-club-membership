@@ -2,16 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ocean Depths Theme - Professional Maritime Color Palette */
+:root {
+  --ocean-navy: #1a2332;
+  --ocean-teal: #2d8b8b;
+  --ocean-seafoam: #a8dadc;
+  --ocean-cream: #f1faee;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--ocean-cream);
+  color: var(--ocean-navy);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Ocean Depths Theme Components */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--ocean-navy);
+}
+
+a {
+  color: var(--ocean-teal);
+}
+
+a:hover {
+  color: var(--ocean-seafoam);
 }

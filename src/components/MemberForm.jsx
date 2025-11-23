@@ -36,6 +36,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
   // Load existing member data if editing
   useEffect(() => {
     if (member) {
+      // eslint-disable-next-line
       setFormData({
         fullName: member.fullName || '',
         email: member.email || '',
@@ -69,7 +70,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
       }
     }
     suggestCategory()
-  }, [formData.dateOfBirth, member])
+  }, [formData.dateOfBirth, member, formData.membershipCategory])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -102,7 +103,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.fullName}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -117,7 +118,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -132,7 +133,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.phone}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -147,7 +148,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.address}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -162,7 +163,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.dateOfBirth}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
             {currentAge !== null && (
               <p className="text-sm text-gray-500 mt-1">Current age: {currentAge} years</p>
@@ -181,7 +182,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               onChange={handleChange}
               required
               placeholder="Name and phone number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
         </div>
@@ -203,7 +204,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.golfAustraliaId}
               onChange={handleChange}
               placeholder="Optional for social members"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -218,7 +219,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.dateJoined}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
@@ -232,7 +233,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.membershipCategory}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="">Select category</option>
               {categories.map(category => (
@@ -242,7 +243,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               ))}
             </select>
             {suggestedCategory && formData.membershipCategory !== suggestedCategory && (
-              <p className="text-sm text-blue-600 mt-1">
+              <p className="text-sm text-ocean-teal mt-1">
                 Suggested based on age: {categories.find(c => c.id === suggestedCategory)?.name}
               </p>
             )}
@@ -258,7 +259,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               value={formData.status}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -301,7 +302,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
         <button
           type="submit"
           disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
         >
           {isLoading ? 'Saving...' : member ? 'Update Member' : 'Add Member'}
         </button>

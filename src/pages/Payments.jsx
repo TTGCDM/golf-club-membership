@@ -165,13 +165,13 @@ const Payments = () => {
     }
     if (sortDirection === 'asc') {
       return (
-        <svg className="w-4 h-4 text-blue-600 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
         </svg>
       )
     }
     return (
-      <svg className="w-4 h-4 text-blue-600 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
     )
@@ -188,7 +188,7 @@ const Payments = () => {
         {!showForm && canEdit && (
           <button
             onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
           >
             Record Payment
           </button>
@@ -197,8 +197,8 @@ const Payments = () => {
 
       {/* Success Message */}
       {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-green-800">{success}</p>
+        <div className="mb-4 p-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
+          <p className="text-ocean-teal">{success}</p>
         </div>
       )}
 
@@ -298,12 +298,12 @@ const Payments = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <button
                         onClick={() => navigate(`/members/${payment.memberId}`)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-ocean-teal hover:text-ocean-navy"
                       >
                         {payment.memberName}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ocean-teal">
                       ${payment.amount.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -319,14 +319,14 @@ const Payments = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <button
                           onClick={() => handlePrintReceipt(payment)}
-                          className="text-green-600 hover:text-green-900 mr-4"
+                          className="text-ocean-teal hover:text-ocean-navy mr-4"
                           title="Print Receipt"
                         >
                           Print
                         </button>
                         <button
                           onClick={() => handleEdit(payment)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
+                          className="text-ocean-teal hover:text-ocean-navy mr-4"
                         >
                           Edit
                         </button>

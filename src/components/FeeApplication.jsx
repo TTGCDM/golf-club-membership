@@ -124,8 +124,8 @@ const FeeApplication = () => {
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-4">
-          <p className="text-green-800 text-sm">{success}</p>
+        <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md p-4">
+          <p className="text-ocean-teal text-sm">{success}</p>
         </div>
       )}
 
@@ -141,7 +141,7 @@ const FeeApplication = () => {
             setSelectedYear(parseInt(e.target.value))
             setPreview(null) // Clear preview when year changes
           }}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
         >
           {[2024, 2025, 2026, 2027].map(year => (
             <option key={year} value={year}>{year}</option>
@@ -149,7 +149,7 @@ const FeeApplication = () => {
         </select>
         <button
           onClick={resetToDefaults}
-          className="text-sm text-blue-600 hover:text-blue-900"
+          className="text-sm text-ocean-teal hover:text-ocean-navy"
         >
           Reset to Default Fees
         </button>
@@ -183,7 +183,7 @@ const FeeApplication = () => {
                     step="0.01"
                     value={categoryFees[cat.id] || 0}
                     onChange={(e) => handleFeeChange(cat.id, e.target.value)}
-                    className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </td>
               </tr>
@@ -204,7 +204,7 @@ const FeeApplication = () => {
         <button
           onClick={handleApply}
           disabled={isLoading || !preview || preview.totalMembers === 0}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Apply Fees to Members
         </button>

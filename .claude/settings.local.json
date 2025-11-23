@@ -6,7 +6,9 @@
       "Bash(firebase --version:*)",
       "Bash(firebase projects:list:*)",
       "Bash(npm run build:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Skill(theme-factory)",
+      "Bash(npm run deploy:*)"
     ],
     "deny": [],
     "ask": []

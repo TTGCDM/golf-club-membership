@@ -156,7 +156,7 @@ const CategoryManager = () => {
       setCategories(reordered)
       await reorderCategories(reordered)
       setSuccess('Categories reordered successfully')
-    } catch (err) {
+    } catch {
       setError('Failed to reorder categories')
       await loadCategories() // Reload on error
     }
@@ -174,7 +174,7 @@ const CategoryManager = () => {
       setCategories(reordered)
       await reorderCategories(reordered)
       setSuccess('Categories reordered successfully')
-    } catch (err) {
+    } catch {
       setError('Failed to reorder categories')
       await loadCategories() // Reload on error
     }
@@ -200,7 +200,7 @@ const CategoryManager = () => {
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+        <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
           {success}
         </div>
       )}
@@ -219,7 +219,7 @@ const CategoryManager = () => {
           </p>
           <button
             onClick={handleSeedCategories}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
           >
             Initialize Default Categories
           </button>
@@ -230,7 +230,7 @@ const CategoryManager = () => {
       <div className="mb-4">
         <button
           onClick={openAddForm}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+          className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
         >
           + Add New Category
         </button>
@@ -292,7 +292,7 @@ const CategoryManager = () => {
                   <td className="px-4 py-3 text-sm space-x-2">
                     <button
                       onClick={() => openEditForm(category)}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-ocean-teal hover:text-ocean-navy"
                     >
                       Edit
                     </button>
@@ -332,7 +332,7 @@ const CategoryManager = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -347,7 +347,7 @@ const CategoryManager = () => {
                     onChange={(e) => setFormData({ ...formData, ageMin: parseInt(e.target.value) })}
                     required
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -361,7 +361,7 @@ const CategoryManager = () => {
                     onChange={(e) => setFormData({ ...formData, ageMax: parseInt(e.target.value) })}
                     required
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -376,7 +376,7 @@ const CategoryManager = () => {
                     onChange={(e) => setFormData({ ...formData, playingRights: e.target.value })}
                     required
                     placeholder="e.g., 7 days, Weekends only, None"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -392,7 +392,7 @@ const CategoryManager = () => {
                     required
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -407,7 +407,7 @@ const CategoryManager = () => {
                     required
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />
                 </div>
 
@@ -442,11 +442,10 @@ const CategoryManager = () => {
                         key={month.num}
                         type="button"
                         onClick={() => toggleJoiningFeeMonth(month.num)}
-                        className={`px-2 py-1 text-xs rounded ${
-                          (formData.joiningFeeMonths || []).includes(month.num)
-                            ? 'bg-blue-600 text-white'
+                        className={`px-2 py-1 text-xs rounded ${(formData.joiningFeeMonths || []).includes(month.num)
+                            ? 'bg-ocean-teal text-white'
                             : 'bg-gray-100 text-gray-600'
-                        }`}
+                          }`}
                       >
                         {month.name}
                       </button>
@@ -467,7 +466,7 @@ const CategoryManager = () => {
               <div className="flex space-x-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
                 >
                   {editingCategory ? 'Update Category' : 'Create Category'}
                 </button>
