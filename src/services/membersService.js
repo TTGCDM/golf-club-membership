@@ -9,12 +9,65 @@ import {
   query,
   where,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { determineCategoryByAge } from './membershipCategories'
 
 const MEMBERS_COLLECTION = 'members'
+
+// ... (existing code)
+
+// Subscribe to all members (Real-time updates)
+export const subscribeToMembers = (callback) => {
+  const q = query(collection(db, MEMBERS_COLLECTION), orderBy('fullName'))
+  return onSnapshot(q, (querySnapshot) => {
+    const members = []
+    querySnapshot.forEach((doc) => {
+      members.push({ id: doc.id, ...doc.data() })
+    })
+    callback(members)
+  }, (error) => {
+    console.error('Error subscribing to members:', error)
+  })
+}
+
+// Calculate member statistics from a list of members
+export const calculateMemberStats = (members) => {
+  const stats = {
+    total: members.length,
+    active: members.filter(m => m.status === 'active').length,
+    inactive: members.filter(m => m.status === 'inactive').length,
+    // Sum of negative balances (owed money) as positive number
+    totalOutstanding: members
+      .filter(m => m.status === 'active' && m.accountBalance < 0)
+      .reduce((sum, m) => sum + Math.abs(m.accountBalance || 0), 0),
+    byCategory: {}
+  }
+
+  // Count members by category
+  members.forEach(member => {
+    const category = member.membershipCategory
+    if (!stats.byCategory[category]) {
+      stats.byCategory[category] = 0
+    }
+    stats.byCategory[category]++
+  })
+
+  return stats
+}
+
+// Get member statistics
+export const getMemberStats = async () => {
+  try {
+    const allMembers = await getAllMembers()
+    return calculateMemberStats(allMembers)
+  } catch (error) {
+    console.error('Error getting member stats:', error)
+    throw error
+  }
+}
 
 // Create a new member
 export const createMember = async (memberData) => {
@@ -245,37 +298,7 @@ export const getMembersWithOutstandingBalance = async () => {
   }
 }
 
-// Get member statistics
-export const getMemberStats = async () => {
-  try {
-    const allMembers = await getAllMembers()
 
-    const stats = {
-      total: allMembers.length,
-      active: allMembers.filter(m => m.status === 'active').length,
-      inactive: allMembers.filter(m => m.status === 'inactive').length,
-      // Sum of negative balances (owed money) as positive number
-      totalOutstanding: allMembers
-        .filter(m => m.status === 'active' && m.accountBalance < 0)
-        .reduce((sum, m) => sum + Math.abs(m.accountBalance || 0), 0),
-      byCategory: {}
-    }
-
-    // Count members by category
-    allMembers.forEach(member => {
-      const category = member.membershipCategory
-      if (!stats.byCategory[category]) {
-        stats.byCategory[category] = 0
-      }
-      stats.byCategory[category]++
-    })
-
-    return stats
-  } catch (error) {
-    console.error('Error getting member stats:', error)
-    throw error
-  }
-}
 
 // Export members to CSV format
 export const exportMembersToCSV = (members) => {

@@ -109,7 +109,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
+              Email
             </label>
             <input
               type="email"
@@ -117,14 +117,13 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-              Phone *
+              Phone
             </label>
             <input
               type="tel"
@@ -132,14 +131,13 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
           <div className="md:col-span-2">
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-              Address *
+              Address
             </label>
             <input
               type="text"
@@ -147,14 +145,13 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               name="address"
               value={formData.address}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
           </div>
 
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
-              Date of Birth *
+              Date of Birth
             </label>
             <input
               type="date"
@@ -162,7 +159,6 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               name="dateOfBirth"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />
             {currentAge !== null && (
@@ -172,7 +168,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
 
           <div>
             <label htmlFor="emergencyContact" className="block text-sm font-medium text-gray-700 mb-1">
-              Emergency Contact *
+              Emergency Contact
             </label>
             <input
               type="text"
@@ -180,7 +176,6 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
               name="emergencyContact"
               value={formData.emergencyContact}
               onChange={handleChange}
-              required
               placeholder="Name and phone number"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
             />

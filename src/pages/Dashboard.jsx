@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getMemberStats, getMembersWithOutstandingBalance } from '../services/membersService'
+import { subscribeToMembers, calculateMemberStats } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
-import { getAllPayments } from '../services/paymentsService'
+import { subscribeToPayments } from '../services/paymentsService'
 
 const Dashboard = () => {
   const { checkPermission, ROLES } = useAuth()
@@ -16,34 +16,54 @@ const Dashboard = () => {
   const canEdit = checkPermission(ROLES.EDIT)
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    let membersLoaded = false
+    let paymentsLoaded = false
+    let categoriesLoaded = false
 
-  const fetchDashboardData = async () => {
-    try {
-      setIsLoading(true)
+    const checkLoading = () => {
+      if (membersLoaded && paymentsLoaded && categoriesLoaded) {
+        setIsLoading(false)
+      }
+    }
 
-      // Fetch all data in parallel
-      const [memberStats, outstanding, cats, payments] = await Promise.all([
-        getMemberStats(),
-        getMembersWithOutstandingBalance(),
-        getAllCategories(),
-        getAllPayments()
-      ])
-
-      setStats(memberStats)
-      setOutstandingMembers(outstanding.slice(0, 5)) // Top 5 outstanding
+    // Fetch categories (static data)
+    getAllCategories().then(cats => {
       setCategories(cats)
+      categoriesLoaded = true
+      checkLoading()
+    }).catch(err => {
+      console.error('Error fetching categories:', err)
+      categoriesLoaded = true
+      checkLoading()
+    })
 
-      // Calculate total amount paid
+    // Subscribe to members
+    const unsubscribeMembers = subscribeToMembers((members) => {
+      const calculatedStats = calculateMemberStats(members)
+      setStats(calculatedStats)
+
+      // Top 5 outstanding
+      const outstanding = members.filter(m => m.status === 'active' && m.accountBalance < 0)
+      setOutstandingMembers(outstanding.slice(0, 5))
+
+      membersLoaded = true
+      checkLoading()
+    })
+
+    // Subscribe to payments
+    const unsubscribePayments = subscribeToPayments((payments) => {
       const total = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0)
       setTotalPaid(total)
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setIsLoading(false)
+
+      paymentsLoaded = true
+      checkLoading()
+    })
+
+    return () => {
+      unsubscribeMembers()
+      unsubscribePayments()
     }
-  }
+  }, [])
 
   if (isLoading) {
     return (

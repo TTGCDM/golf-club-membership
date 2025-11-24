@@ -8,13 +8,56 @@ import {
   orderBy,
   limit,
   serverTimestamp,
-  runTransaction
+  runTransaction,
+  onSnapshot
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getMemberById } from './membersService'
 import jsPDF from 'jspdf'
 
 const PAYMENTS_COLLECTION = 'payments'
+
+// ... (existing code)
+
+// Subscribe to all payments (Real-time updates)
+export const subscribeToPayments = (callback) => {
+  const q = query(
+    collection(db, PAYMENTS_COLLECTION),
+    orderBy('paymentDate', 'desc')
+  )
+
+  return onSnapshot(q, (querySnapshot) => {
+    const payments = []
+    querySnapshot.forEach((doc) => {
+      payments.push({ id: doc.id, ...doc.data() })
+    })
+    callback(payments)
+  }, (error) => {
+    console.error('Error subscribing to payments:', error)
+  })
+}
+
+// Get all payments
+export const getAllPayments = async () => {
+  try {
+    const q = query(
+      collection(db, PAYMENTS_COLLECTION),
+      orderBy('paymentDate', 'desc')
+    )
+
+    const querySnapshot = await getDocs(q)
+    const payments = []
+
+    querySnapshot.forEach((doc) => {
+      payments.push({ id: doc.id, ...doc.data() })
+    })
+
+    return payments
+  } catch (error) {
+    console.error('Error getting payments:', error)
+    throw error
+  }
+}
 
 
 // Generate receipt number (format: R2025-001)
@@ -118,27 +161,6 @@ export const getPaymentById = async (paymentId) => {
   }
 }
 
-// Get all payments
-export const getAllPayments = async () => {
-  try {
-    const q = query(
-      collection(db, PAYMENTS_COLLECTION),
-      orderBy('paymentDate', 'desc')
-    )
-
-    const querySnapshot = await getDocs(q)
-    const payments = []
-
-    querySnapshot.forEach((doc) => {
-      payments.push({ id: doc.id, ...doc.data() })
-    })
-
-    return payments
-  } catch (error) {
-    console.error('Error getting payments:', error)
-    throw error
-  }
-}
 
 // Get payments for a specific member
 export const getPaymentsByMember = async (memberId) => {

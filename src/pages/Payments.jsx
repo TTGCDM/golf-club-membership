@@ -21,8 +21,11 @@ const Payments = () => {
 
   const canEdit = checkPermission(ROLES.EDIT)
 
+  const [userMap, setUserMap] = useState({})
+
   useEffect(() => {
     fetchPayments()
+    fetchUsers()
 
     // Check if member ID is in URL
     const memberId = searchParams.get('member')
@@ -31,6 +34,20 @@ const Payments = () => {
       setShowForm(true)
     }
   }, [searchParams])
+
+  const fetchUsers = async () => {
+    try {
+      const { getAllUsers } = await import('../services/usersService')
+      const users = await getAllUsers()
+      const map = {}
+      users.forEach(user => {
+        map[user.uid] = user.email
+      })
+      setUserMap(map)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
 
   const loadPreSelectedMember = async (memberId) => {
     try {
@@ -313,7 +330,7 @@ const Payments = () => {
                       {payment.reference || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {payment.recordedBy}
+                      {userMap[payment.recordedBy] || payment.recordedBy}
                     </td>
                     {canEdit && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

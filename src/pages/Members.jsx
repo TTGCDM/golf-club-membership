@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getAllMembers, downloadMembersCSV } from '../services/membersService'
+import { downloadMembersCSV, subscribeToMembers } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
 
 const Members = () => {
@@ -17,24 +17,32 @@ const Members = () => {
   const canEdit = checkPermission(ROLES.EDIT)
 
   useEffect(() => {
-    fetchMembers()
-  }, [])
+    let unsubscribeMembers = () => { }
 
-  const fetchMembers = async () => {
-    try {
-      setIsLoading(true)
-      const [data, cats] = await Promise.all([
-        getAllMembers(),
-        getAllCategories()
-      ])
-      setMembers(data)
-      setCategories(cats)
-    } catch (error) {
-      console.error('Error fetching members:', error)
-    } finally {
-      setIsLoading(false)
+    const initializeData = async () => {
+      try {
+        setIsLoading(true)
+        // Fetch categories once
+        const cats = await getAllCategories()
+        setCategories(cats)
+
+        // Subscribe to members
+        unsubscribeMembers = subscribeToMembers((data) => {
+          setMembers(data)
+          setIsLoading(false)
+        })
+      } catch (error) {
+        console.error('Error initializing members page:', error)
+        setIsLoading(false)
+      }
     }
-  }
+
+    initializeData()
+
+    return () => {
+      unsubscribeMembers()
+    }
+  }, [])
 
   useEffect(() => {
     const applyFilters = () => {
