@@ -1,69 +1,72 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { subscribeToMembers, calculateMemberStats } from '../services/membersService'
+import { getAllMembers, calculateMemberStats } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
-import { subscribeToPayments } from '../services/paymentsService'
+import { getAllPayments } from '../services/paymentsService'
 
 const Dashboard = () => {
   const { checkPermission, ROLES } = useAuth()
-  const [stats, setStats] = useState(null)
-  const [outstandingMembers, setOutstandingMembers] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [categories, setCategories] = useState([])
-  const [totalPaid, setTotalPaid] = useState(0)
-
   const canEdit = checkPermission(ROLES.EDIT)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  useEffect(() => {
-    let membersLoaded = false
-    let paymentsLoaded = false
-    let categoriesLoaded = false
+  // Fetch members with React Query (shared cache with Members page)
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['members'],
+    queryFn: getAllMembers,
+    staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
+    refetchOnWindowFocus: true,   // Auto-refresh when user returns to tab
+  })
 
-    const checkLoading = () => {
-      if (membersLoaded && paymentsLoaded && categoriesLoaded) {
-        setIsLoading(false)
-      }
-    }
+  // Fetch payments with React Query (shared cache with Payments page)
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ['payments'],
+    queryFn: getAllPayments,
+    staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
+    refetchOnWindowFocus: true,   // Auto-refresh when user returns to tab
+  })
 
-    // Fetch categories (static data)
-    getAllCategories().then(cats => {
-      setCategories(cats)
-      categoriesLoaded = true
-      checkLoading()
-    }).catch(err => {
-      console.error('Error fetching categories:', err)
-      categoriesLoaded = true
-      checkLoading()
-    })
+  // Fetch categories with React Query (shared cache)
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+    staleTime: 10 * 60 * 1000,   // Categories change rarely, fresh for 10 minutes
+    cacheTime: 30 * 60 * 1000,   // Keep in cache for 30 minutes
+  })
 
-    // Subscribe to members
-    const unsubscribeMembers = subscribeToMembers((members) => {
-      const calculatedStats = calculateMemberStats(members)
-      setStats(calculatedStats)
+  // Calculate stats from members data
+  const stats = calculateMemberStats(members)
 
-      // Top 5 outstanding
-      const outstanding = members.filter(m => m.status === 'active' && m.accountBalance < 0)
-      setOutstandingMembers(outstanding.slice(0, 5))
+  // Get ALL members who owe money (for accurate count)
+  const allMembersWithDebt = members
+    .filter(m => m.status === 'active' && m.accountBalance < 0)
 
-      membersLoaded = true
-      checkLoading()
-    })
+  // Filter payments by selected year
+  const paymentsForYear = payments.filter(payment => {
+    if (!payment.paymentDate) return false
+    const paymentYear = new Date(payment.paymentDate).getFullYear()
+    return paymentYear === selectedYear
+  })
 
-    // Subscribe to payments
-    const unsubscribePayments = subscribeToPayments((payments) => {
-      const total = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0)
-      setTotalPaid(total)
+  // Calculate total paid for selected year
+  const totalPaidForYear = paymentsForYear.reduce((sum, payment) => sum + (payment.amount || 0), 0)
 
-      paymentsLoaded = true
-      checkLoading()
-    })
+  // Get available years from payments
+  const availableYears = [...new Set(payments.map(p => {
+    if (!p.paymentDate) return null
+    return new Date(p.paymentDate).getFullYear()
+  }).filter(year => year !== null))].sort((a, b) => b - a)
 
-    return () => {
-      unsubscribeMembers()
-      unsubscribePayments()
-    }
-  }, [])
+  // Add current year if not in list
+  const currentYear = new Date().getFullYear()
+  if (!availableYears.includes(currentYear)) {
+    availableYears.unshift(currentYear)
+  }
+
+  const isLoading = membersLoading || paymentsLoading || categoriesLoading
 
   if (isLoading) {
     return (
@@ -76,8 +79,10 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
-      <p className="text-gray-600 mb-6">Welcome to Tea Tree Golf Club Membership Management System</p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-1">Welcome to Tea Tree Golf Club Membership Management System</p>
+      </div>
 
       {/* Key Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -108,7 +113,7 @@ const Dashboard = () => {
                 ${(stats?.totalOutstanding || 0).toFixed(2)}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                {outstandingMembers.length} members owe money
+                {allMembersWithDebt.length} members owe money
               </p>
             </div>
             <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
@@ -172,16 +177,29 @@ const Dashboard = () => {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Payment Status Overview</h2>
-            <Link to="/reports" className="text-sm text-ocean-teal hover:text-ocean-navy">
-              View Details
-            </Link>
+            <div className="flex items-center gap-3">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <Link to="/reports" className="text-sm text-ocean-teal hover:text-ocean-navy">
+                View Details
+              </Link>
+            </div>
           </div>
           {(() => {
-            const unpaidMembers = stats?.active - outstandingMembers.length || 0
-            const paidMembers = outstandingMembers.length || 0
+            // Current balance status (not year-specific)
+            const membersWithDebt = allMembersWithDebt.length || 0
+            const paidUpMembers = stats?.active - membersWithDebt || 0
             const totalActive = stats?.active || 0
-            const paidPercentage = totalActive > 0 ? (paidMembers / totalActive * 100).toFixed(1) : 0
-            const unpaidPercentage = totalActive > 0 ? (unpaidMembers / totalActive * 100).toFixed(1) : 0
+
+            const paidPercentage = totalActive > 0 ? (paidUpMembers / totalActive * 100).toFixed(1) : 0
+            const outstandingPercentage = totalActive > 0 ? (membersWithDebt / totalActive * 100).toFixed(1) : 0
 
             return (
               <div className="space-y-6">
@@ -194,10 +212,10 @@ const Dashboard = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <p className="text-3xl font-bold text-ocean-teal">{paidMembers}</p>
+                    <p className="text-3xl font-bold text-ocean-teal">{paidUpMembers}</p>
                     <p className="text-xs text-ocean-teal mt-1">{paidPercentage}% of active members</p>
                     <p className="text-sm font-medium text-ocean-teal mt-2">
-                      ${totalPaid.toFixed(2)} paid
+                      ${totalPaidForYear.toFixed(2)} received in {selectedYear}
                     </p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
@@ -207,10 +225,10 @@ const Dashboard = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <p className="text-3xl font-bold text-red-700">{unpaidMembers}</p>
-                    <p className="text-xs text-red-600 mt-1">{unpaidPercentage}% of active members</p>
+                    <p className="text-3xl font-bold text-red-700">{membersWithDebt}</p>
+                    <p className="text-xs text-red-600 mt-1">{outstandingPercentage}% of active members</p>
                     <p className="text-sm font-medium text-red-700 mt-2">
-                      ${(stats?.totalOutstanding || 0).toFixed(2)} owed
+                      ${(stats?.totalOutstanding || 0).toFixed(2)} currently owed
                     </p>
                   </div>
                 </div>
@@ -218,11 +236,11 @@ const Dashboard = () => {
                 {/* Visual Bar Chart */}
                 <div>
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span>Payment Distribution</span>
+                    <span>Current Payment Status</span>
                     <span>{totalActive} active members</span>
                   </div>
                   <div className="w-full h-8 bg-gray-200 rounded-full overflow-hidden flex">
-                    {paidMembers > 0 && (
+                    {paidUpMembers > 0 && (
                       <div
                         className="bg-ocean-teal flex items-center justify-center text-white text-xs font-medium"
                         style={{ width: `${paidPercentage}%` }}
@@ -230,19 +248,19 @@ const Dashboard = () => {
                         {paidPercentage > 15 && `${paidPercentage}%`}
                       </div>
                     )}
-                    {unpaidMembers > 0 && (
+                    {membersWithDebt > 0 && (
                       <div
                         className="bg-red-500 flex items-center justify-center text-white text-xs font-medium"
-                        style={{ width: `${unpaidPercentage}%` }}
+                        style={{ width: `${outstandingPercentage}%` }}
                       >
-                        {unpaidPercentage > 15 && `${unpaidPercentage}%`}
+                        {outstandingPercentage > 15 && `${outstandingPercentage}%`}
                       </div>
                     )}
                   </div>
                   <div className="flex justify-between mt-2 text-xs text-gray-500">
                     <span className="flex items-center">
                       <span className="w-3 h-3 bg-ocean-teal rounded-full mr-1"></span>
-                      Paid
+                      Paid Up
                     </span>
                     <span className="flex items-center">
                       <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
@@ -252,14 +270,16 @@ const Dashboard = () => {
                 </div>
 
                 {/* Quick Stats */}
-                {unpaidMembers > 0 && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Amount Owed:</span>
-                      <span className="font-bold text-red-600">${(stats?.totalOutstanding || 0).toFixed(2)}</span>
-                    </div>
+                <div className="pt-4 border-t border-gray-200 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total Received in {selectedYear}:</span>
+                    <span className="font-bold text-ocean-teal">${totalPaidForYear.toFixed(2)}</span>
                   </div>
-                )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Currently Outstanding (all time):</span>
+                    <span className="font-bold text-red-600">${(stats?.totalOutstanding || 0).toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             )
           })()}

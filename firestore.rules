@@ -12,24 +12,30 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Get the user document for the authenticated user
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // Cache user document for the entire request (CRITICAL: only 1 read per request!)
+    // This is called once and the result is reused throughout the request
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Check if user exists in users collection
+    // Get user data from cached document
+    function userData() {
+      return userDoc().data;
+    }
+
+    // Check if user exists using cached document
     function userExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc() != null;
     }
 
     // Check if user status is ACTIVE
     function isActiveUser() {
-      return isSignedIn() && userExists() && getUserData().status == 'active';
+      return isSignedIn() && userExists() && userData().status == 'active';
     }
 
     // Get user's role
     function getUserRole() {
-      return getUserData().role;
+      return userData().role;
     }
 
     // Role hierarchy: view=1, edit=2, admin=3, super_admin=4

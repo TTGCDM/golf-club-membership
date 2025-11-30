@@ -1,0 +1,116 @@
+# GitHub Configuration for Repository Management
+# Used by Antigravity to create and manage repositories
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to github-config.yaml
+# 2. Replace all placeholder values (YOUR_* fields)
+# 3. Create GitHub Personal Access Token at: https://github.com/settings/tokens/new
+#    Required scopes: repo, delete_repo, admin:repo_hook, admin:org
+# 4. Never commit github-config.yaml (already in .gitignore)
+
+github:
+  # Your GitHub username or organization name
+  owner: YOUR_GITHUB_USERNAME_HERE
+
+  # GitHub Personal Access Token (PAT)
+  # Required scopes: repo, delete_repo, admin:repo_hook, admin:org
+  # Create at: https://github.com/settings/tokens/new
+  # IMPORTANT: Keep this secure! Add to .gitignore
+  token: YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_HERE
+
+  # API endpoint (use default for github.com, or your GitHub Enterprise URL)
+  api_url: https://api.github.com
+
+  # Default repository settings
+  repository:
+    # Repository visibility
+    visibility: private  # Options: public, private, internal
+
+    # Auto-initialize repository
+    auto_init: true
+
+    # Default branch name
+    default_branch: main
+
+    # Repository features
+    features:
+      has_issues: true
+      has_projects: true
+      has_wiki: false
+      has_downloads: true
+
+    # Repository settings
+    settings:
+      allow_squash_merge: true
+      allow_merge_commit: true
+      allow_rebase_merge: true
+      delete_branch_on_merge: true
+
+    # Branch protection (applied to default branch)
+    branch_protection:
+      enabled: false
+      require_pull_request_reviews: false
+      required_approving_review_count: 1
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: false
+
+  # Team/collaborator access (optional)
+  access:
+    # Teams with access (format: team-slug: permission)
+    teams: {}
+      # example-team: push
+      # admin-team: admin
+
+    # Individual collaborators (format: username: permission)
+    collaborators: {}
+      # username: push
+
+    # Permission levels: pull, triage, push, maintain, admin
+
+  # Labels to create in new repositories
+  labels:
+    - name: bug
+      color: d73a4a
+      description: Something isn't working
+    - name: enhancement
+      color: a2eeef
+      description: New feature or request
+    - name: documentation
+      color: 0075ca
+      description: Improvements or additions to documentation
+    - name: duplicate
+      color: cfd3d7
+      description: This issue or pull request already exists
+    - name: wontfix
+      color: ffffff
+      description: This will not be worked on
+
+# Project-specific settings (customize per project)
+project:
+  name: testproject
+  description: React 18 + Firebase membership management system for Tea Tree Golf Club
+  homepage: https://yoursite.com
+  topics:
+    - react
+    - firebase
+    - membership-management
+    - firestore
+    - vite
+
+# Deployment settings (if applicable)
+deployment:
+  # GitHub Pages
+  pages:
+    enabled: false
+    source_branch: gh-pages
+    source_path: /
+
+  # GitHub Actions
+  actions:
+    enabled: true
+
+# Backup settings
+backup:
+  enabled: true
+  frequency: daily
+  retention_days: 30

@@ -36,3 +36,6 @@ firebase-debug.*.log
 .env.local
 .env.production
 .env.*.local
+
+# GitHub credentials (contains sensitive tokens)
+github-config.yaml

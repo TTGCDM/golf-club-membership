@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import PaymentForm from '../components/PaymentForm'
 import { recordPayment, getAllPayments, deletePayment, updatePayment, formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
@@ -7,7 +8,6 @@ import { getMemberById } from '../services/membersService'
 
 const Payments = () => {
   const [showForm, setShowForm] = useState(false)
-  const [payments, setPayments] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -18,24 +18,32 @@ const Payments = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { currentUser, checkPermission, ROLES } = useAuth()
+  const queryClient = useQueryClient()
 
   const canEdit = checkPermission(ROLES.EDIT)
 
   const [userMap, setUserMap] = useState({})
 
-  useEffect(() => {
-    fetchPayments()
-    fetchUsers()
+  // Fetch payments with React Query (cached)
+  const { data: payments = [] } = useQuery({
+    queryKey: ['payments'],
+    queryFn: getAllPayments,
+    staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
+  })
 
-    // Check if member ID is in URL
-    const memberId = searchParams.get('member')
-    if (memberId) {
-      loadPreSelectedMember(memberId)
-      setShowForm(true)
+  // Memoize loadPreSelectedMember to prevent infinite re-renders
+  const loadPreSelectedMember = useCallback(async (memberId) => {
+    try {
+      const member = await getMemberById(memberId)
+      setPreSelectedMember(member)
+    } catch (error) {
+      console.error('Error loading member:', error)
     }
-  }, [searchParams])
+  }, [])
 
-  const fetchUsers = async () => {
+  // Memoize fetchUsers to prevent infinite re-renders
+  const fetchUsers = useCallback(async () => {
     try {
       const { getAllUsers } = await import('../services/usersService')
       const users = await getAllUsers()
@@ -47,25 +55,18 @@ const Payments = () => {
     } catch (error) {
       console.error('Error fetching users:', error)
     }
-  }
+  }, [])
 
-  const loadPreSelectedMember = async (memberId) => {
-    try {
-      const member = await getMemberById(memberId)
-      setPreSelectedMember(member)
-    } catch (error) {
-      console.error('Error loading member:', error)
-    }
-  }
+  useEffect(() => {
+    fetchUsers()
 
-  const fetchPayments = async () => {
-    try {
-      const data = await getAllPayments()
-      setPayments(data)
-    } catch (error) {
-      console.error('Error fetching payments:', error)
+    // Check if member ID is in URL
+    const memberId = searchParams.get('member')
+    if (memberId) {
+      loadPreSelectedMember(memberId)
+      setShowForm(true)
     }
-  }
+  }, [searchParams, fetchUsers, loadPreSelectedMember])
 
   const handleSubmit = async (formData) => {
     setIsLoading(true)
@@ -86,7 +87,10 @@ const Payments = () => {
       setShowForm(false)
       setPreSelectedMember(null)
       setEditingPayment(null)
-      await fetchPayments()
+
+      // Invalidate queries to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(null), 5000)
@@ -106,7 +110,11 @@ const Payments = () => {
     try {
       await deletePayment(paymentId)
       setSuccess('Payment deleted successfully')
-      await fetchPayments()
+
+      // Invalidate queries to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+
       setTimeout(() => setSuccess(null), 5000)
     } catch (error) {
       console.error('Error deleting payment:', error)

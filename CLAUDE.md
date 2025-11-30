@@ -354,14 +354,40 @@ if (!checkPermission(ROLES.EDIT)) {
 ---
 
 **Project**: Tea Tree Golf Club Membership Management System
-**Version**: 1.2.0 (Production - Deployed)
-**Last Updated**: November 2025
+**Version**: 1.4.0 (Production - Ready)
+**Last Updated**: December 2025
 
 ---
 
 ## Version History
 
-### v1.2.0 - Enhanced UX & Reporting (Current)
+### v1.4.0 - Dashboard Analytics & Report Enhancements (Current)
+**Status**: Ready for deployment
+
+**New Features**:
+- **Dashboard - Payment Status Overview**:
+  - Added year selector dropdown to filter payment data by year
+  - Shows current balance status (Paid Up vs Outstanding members)
+  - Displays year-specific payment totals
+  - Fixed member count calculations (now correctly shows all members with outstanding balances)
+
+- **Reports - Outstanding Payments**:
+  - Added TOTAL row showing sum of all amounts owed
+  - Total row appears in both CSV and PDF exports
+  - PDF total row includes separator line and bold formatting
+
+**Bug Fixes**:
+- Fixed Dashboard calculation showing only top 5 members instead of all members with outstanding balances
+- Fixed Payments page hooks dependency order issue
+- Removed unused variables causing ESLint errors
+- All code passes linting with zero warnings
+
+**Code Quality**:
+- Full ESLint compliance
+- Production build verified and optimized
+- All unused variables removed
+
+### v1.2.0 - Enhanced UX & Reporting
 **Deployed**: November 2025
 
 **New Features**:

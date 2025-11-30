@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tea Tree Golf Club - Design Reference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ocean-navy': '#1a2332',
+            'ocean-teal': '#2d8b8b',
+            'ocean-seafoam': '#a8dadc',
+            'ocean-cream': '#f1faee',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-ocean-cream">
+  <!-- Navigation Example -->
+  <nav class="bg-ocean-teal text-white shadow-lg mb-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center">
+          <h1 class="text-xl font-bold">Design Reference</h1>
+          <div class="ml-8 flex space-x-2">
+            <a href="#" class="bg-white text-ocean-navy px-4 py-3 rounded-md text-base font-semibold">Active</a>
+            <a href="#" class="bg-ocean-navy bg-opacity-60 text-white px-4 py-3 rounded-md text-base font-semibold hover:bg-white hover:text-ocean-navy transition-all duration-200">Link</a>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <span class="mr-4 text-sm">user@example.com</span>
+          <button class="bg-ocean-navy hover:bg-white hover:text-ocean-navy px-4 py-2 rounded-md text-sm font-medium transition-all duration-200">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Design System Reference</h1>
+    <p class="text-gray-600 mb-8">Tea Tree Golf Club - Ocean Depths Theme</p>
+
+    <!-- Color Palette -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Color Palette</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div>
+          <div class="bg-ocean-navy h-32 rounded-lg shadow-lg mb-2"></div>
+          <p class="font-semibold text-gray-900">Ocean Navy</p>
+          <p class="text-sm text-gray-600">#1a2332</p>
+          <p class="text-xs text-gray-500 mt-1">Primary dark, headings, navigation</p>
+        </div>
+        <div>
+          <div class="bg-ocean-teal h-32 rounded-lg shadow-lg mb-2"></div>
+          <p class="font-semibold text-gray-900">Ocean Teal</p>
+          <p class="text-sm text-gray-600">#2d8b8b</p>
+          <p class="text-xs text-gray-500 mt-1">Primary brand, buttons, links</p>
+        </div>
+        <div>
+          <div class="bg-ocean-seafoam h-32 rounded-lg shadow-lg mb-2"></div>
+          <p class="font-semibold text-gray-900">Ocean Seafoam</p>
+          <p class="text-sm text-gray-600">#a8dadc</p>
+          <p class="text-xs text-gray-500 mt-1">Accents, light backgrounds</p>
+        </div>
+        <div>
+          <div class="bg-ocean-cream h-32 rounded-lg shadow-lg border border-gray-200 mb-2"></div>
+          <p class="font-semibold text-gray-900">Ocean Cream</p>
+          <p class="text-sm text-gray-600">#f1faee</p>
+          <p class="text-xs text-gray-500 mt-1">Page background</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Buttons</h2>
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Primary Button</p>
+            <button class="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy transition-all duration-200">
+              Primary Action
+            </button>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Secondary Button</p>
+            <button class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-all duration-200">
+              Secondary Action
+            </button>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Outline Button</p>
+            <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-all duration-200">
+              Cancel
+            </button>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Text Link</p>
+            <button class="text-ocean-teal hover:text-ocean-navy font-medium transition-all duration-200">
+              Link Action
+            </button>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Disabled Button</p>
+            <button class="px-4 py-2 bg-ocean-teal text-white rounded-md opacity-50 cursor-not-allowed">
+              Disabled
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Cards & Statistics</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Stat Card 1 -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Members</p>
+              <p class="text-3xl font-bold text-gray-900 mt-2">256</p>
+              <p class="text-sm text-gray-500 mt-1">240 active, 16 inactive</p>
+            </div>
+            <div class="h-12 w-12 bg-ocean-seafoam bg-opacity-30 rounded-full flex items-center justify-center">
+              <svg class="h-6 w-6 text-ocean-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stat Card 2 -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Outstanding</p>
+              <p class="text-3xl font-bold text-red-600 mt-2">$4,285.50</p>
+              <p class="text-sm text-gray-500 mt-1">23 members owe money</p>
+            </div>
+            <div class="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stat Card 3 -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Active Members</p>
+              <p class="text-3xl font-bold text-ocean-teal mt-2">240</p>
+              <p class="text-sm text-gray-500 mt-1">93.8% of total</p>
+            </div>
+            <div class="h-12 w-12 bg-ocean-seafoam bg-opacity-30 rounded-full flex items-center justify-center">
+              <svg class="h-6 w-6 text-ocean-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colored Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-ocean-seafoam bg-opacity-20 rounded-lg p-4 border border-ocean-teal">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-ocean-teal">Paid Up</span>
+            <svg class="h-5 w-5 text-ocean-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p class="text-3xl font-bold text-ocean-teal">217</p>
+          <p class="text-xs text-ocean-teal mt-1">90.4% of active members</p>
+          <p class="text-sm font-medium text-ocean-teal mt-2">$45,890.00 paid</p>
+        </div>
+
+        <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-red-700">Outstanding</span>
+            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p class="text-3xl font-bold text-red-700">23</p>
+          <p class="text-xs text-red-600 mt-1">9.6% of active members</p>
+          <p class="text-sm font-medium text-red-700 mt-2">$4,285.50 owed</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Form Elements</h2>
+      <div class="bg-white rounded-lg shadow p-6">
+        <form class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="text-input" class="block text-sm font-medium text-gray-700 mb-1">
+                Text Input
+              </label>
+              <input
+                type="text"
+                id="text-input"
+                placeholder="Enter text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              />
+            </div>
+
+            <div>
+              <label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">
+                Email Input
+              </label>
+              <input
+                type="email"
+                id="email-input"
+                placeholder="email@example.com"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              />
+            </div>
+
+            <div>
+              <label for="select-input" class="block text-sm font-medium text-gray-700 mb-1">
+                Select Dropdown
+              </label>
+              <select
+                id="select-input"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              >
+                <option value="">Select option</option>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="date-input" class="block text-sm font-medium text-gray-700 mb-1">
+                Date Input
+              </label>
+              <input
+                type="date"
+                id="date-input"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-4">
+            <button type="submit" class="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy transition-all duration-200">
+              Submit
+            </button>
+            <button type="button" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-all duration-200">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Alerts -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Alerts & Messages</h2>
+      <div class="space-y-4">
+        <div class="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-navy px-4 py-3 rounded">
+          <p class="text-ocean-teal">Success! Operation completed successfully.</p>
+        </div>
+
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          Error! Something went wrong. Please try again.
+        </div>
+
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          Warning! Please review the information before proceeding.
+        </div>
+
+        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+          Info: Here's some helpful information for you.
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress Bars -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Progress Bars</h2>
+      <div class="bg-white rounded-lg shadow p-6 space-y-6">
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-700">Junior Members</span>
+            <span class="font-medium text-gray-900">45</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-ocean-teal h-2 rounded-full" style="width: 45%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-700">Adult Members</span>
+            <span class="font-medium text-gray-900">65</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-ocean-teal h-2 rounded-full" style="width: 65%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-700">Senior Members</span>
+            <span class="font-medium text-gray-900">30</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-ocean-teal h-2 rounded-full" style="width: 30%"></div>
+          </div>
+        </div>
+
+        <!-- Split Bar Chart -->
+        <div class="pt-4 border-t border-gray-200">
+          <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+            <span>Payment Distribution</span>
+            <span>240 active members</span>
+          </div>
+          <div class="w-full h-8 bg-gray-200 rounded-full overflow-hidden flex">
+            <div class="bg-ocean-teal flex items-center justify-center text-white text-xs font-medium" style="width: 90%">
+              90% Paid
+            </div>
+            <div class="bg-red-500 flex items-center justify-center text-white text-xs font-medium" style="width: 10%">
+            </div>
+          </div>
+          <div class="flex justify-between mt-2 text-xs text-gray-500">
+            <span class="flex items-center">
+              <span class="w-3 h-3 bg-ocean-teal rounded-full mr-1"></span>
+              Paid Up
+            </span>
+            <span class="flex items-center">
+              <span class="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+              Outstanding
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Typography</h2>
+      <div class="bg-white rounded-lg shadow p-6 space-y-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Heading 1 - text-3xl font-bold</h1>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Heading 2 - text-2xl font-bold</h2>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Heading 3 - text-lg font-semibold</h3>
+        </div>
+        <div>
+          <p class="text-base text-gray-900">Body text - text-base (16px)</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Secondary text - text-sm text-gray-600</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Small text - text-xs text-gray-500</p>
+        </div>
+        <div>
+          <a href="#" class="text-ocean-teal hover:text-ocean-navy font-medium">Link text - hover to see effect</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-center text-gray-600 text-sm pb-8">
+      <p>Tea Tree Golf Club Design System v1.3.0</p>
+      <p class="mt-1">Ocean Depths Theme - Professional Maritime Palette</p>
+    </footer>
+  </main>
+</body>
+</html>

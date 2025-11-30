@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -14,28 +15,43 @@ import Admin from './pages/Admin'
 import PrivateRoute from './components/PrivateRoute'
 import Layout from './components/Layout'
 
+// Configure React Query with optimized caching settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // Data is fresh for 5 minutes
+      cacheTime: 10 * 60 * 1000, // Cache persists for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnMount: false, // Don't refetch on component mount if data is fresh
+      retry: 1, // Only retry failed requests once
+    },
+  },
+})
+
 function App() {
   return (
-    <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="members" element={<Members />} />
-            <Route path="members/add" element={<AddMember />} />
-            <Route path="members/:id" element={<MemberDetail />} />
-            <Route path="members/:id/edit" element={<EditMember />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="users" element={<Users />} />
-            <Route path="admin" element={<Admin />} />
-          </Route>
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="members" element={<Members />} />
+              <Route path="members/add" element={<AddMember />} />
+              <Route path="members/:id" element={<MemberDetail />} />
+              <Route path="members/:id/edit" element={<EditMember />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="users" element={<Users />} />
+              <Route path="admin" element={<Admin />} />
+            </Route>
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "golf-club-membership",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.10",
     "firebase": "^10.8.0",
     "jspdf": "^3.0.3",
     "react": "^18.3.1",

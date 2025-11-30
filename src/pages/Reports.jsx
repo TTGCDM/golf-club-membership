@@ -146,10 +146,23 @@ const Reports = () => {
     }
 
     const headers = Object.keys(data[0])
-    const csvContent = [
+    let csvRows = [
       headers.join(','),
       ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
-    ].join('\n')
+    ]
+
+    // Add total row for outstanding payments report
+    if (reportType === 'outstanding') {
+      const totalOwed = outstandingMembers.reduce((sum, m) => sum + Math.abs(m.accountBalance || 0), 0)
+      const totalRow = headers.map(header => {
+        if (header === 'Member Name') return '"TOTAL"'
+        if (header === 'Amount Owed') return `"$${totalOwed.toFixed(2)}"`
+        return '""'
+      }).join(',')
+      csvRows.push(totalRow)
+    }
+
+    const csvContent = csvRows.join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
@@ -223,6 +236,27 @@ const Reports = () => {
       })
       yPosition += rowHeight
     })
+
+    // Add total row for outstanding payments report
+    if (reportType === 'outstanding') {
+      const totalOwed = outstandingMembers.reduce((sum, m) => sum + Math.abs(m.accountBalance || 0), 0)
+      yPosition += 3 // Add some space
+
+      // Draw separator line
+      doc.setDrawColor(200, 200, 200)
+      doc.line(10, yPosition - 2, pageWidth - 10, yPosition - 2)
+
+      doc.setFont(undefined, 'bold')
+      headers.forEach((header, i) => {
+        let text = ''
+        if (header === 'Member Name') text = 'TOTAL'
+        if (header === 'Amount Owed') text = `$${totalOwed.toFixed(2)}`
+
+        const maxWidth = columnWidth - 2
+        doc.text(text, 10 + (i * columnWidth), yPosition, { maxWidth })
+      })
+      yPosition += rowHeight
+    }
 
     // Footer
     const totalPages = doc.internal.pages.length - 1
@@ -395,7 +429,7 @@ const Reports = () => {
           </p>
           <div className="mt-3 text-xs text-blue-700">
             <strong>Fields included:</strong>
-            {reportType === 'outstanding' && ' Member Name, Email, Phone, Category, Amount Owed'}
+            {reportType === 'outstanding' && ' Member Name, Email, Phone, Category, Amount Owed (with TOTAL row)'}
             {reportType === 'all-members' && ' Member Name, Email, Phone, Category, Status, Balance, Date Joined'}
             {reportType === 'active-members' && ' Member Name, Email, Phone, Category, Balance, Date Joined'}
             {reportType === 'payments' && ' Date, Receipt #, Member, Amount, Payment Method, Reference, Recorded By'}

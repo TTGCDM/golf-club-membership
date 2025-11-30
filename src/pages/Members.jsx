@@ -1,48 +1,36 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { downloadMembersCSV, subscribeToMembers } from '../services/membersService'
+import { downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
 
 const Members = () => {
   const { checkPermission, ROLES } = useAuth()
-  const [members, setMembers] = useState([])
   const [filteredMembers, setFilteredMembers] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [categories, setCategories] = useState([])
 
   const canEdit = checkPermission(ROLES.EDIT)
 
-  useEffect(() => {
-    let unsubscribeMembers = () => { }
+  // Fetch members with React Query (cached)
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['members'],
+    queryFn: getAllMembers,
+    staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
+  })
 
-    const initializeData = async () => {
-      try {
-        setIsLoading(true)
-        // Fetch categories once
-        const cats = await getAllCategories()
-        setCategories(cats)
+  // Fetch categories with React Query (cached)
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+    staleTime: 10 * 60 * 1000,   // Categories change rarely, fresh for 10 minutes
+    cacheTime: 30 * 60 * 1000,   // Keep in cache for 30 minutes
+  })
 
-        // Subscribe to members
-        unsubscribeMembers = subscribeToMembers((data) => {
-          setMembers(data)
-          setIsLoading(false)
-        })
-      } catch (error) {
-        console.error('Error initializing members page:', error)
-        setIsLoading(false)
-      }
-    }
-
-    initializeData()
-
-    return () => {
-      unsubscribeMembers()
-    }
-  }, [])
+  const isLoading = membersLoading || categoriesLoading
 
   useEffect(() => {
     const applyFilters = () => {
