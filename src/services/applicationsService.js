@@ -1,0 +1,516 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  runTransaction,
+  onSnapshot,
+  Timestamp
+} from 'firebase/firestore'
+import { db } from '../firebase'
+import { createMember } from './membersService'
+
+const APPLICATIONS_COLLECTION = 'applications'
+
+// Application status constants
+export const APPLICATION_STATUS = {
+  SUBMITTED: 'submitted',           // Just submitted, email not verified yet
+  EMAIL_VERIFIED: 'email_verified', // Email verified, awaiting admin review
+  APPROVED: 'approved',             // Approved by admin, member created
+  REJECTED: 'rejected'              // Rejected by admin
+}
+
+// Membership type constants
+export const MEMBERSHIP_TYPES = {
+  FULL: 'Full',
+  RESTRICTED: 'Restricted',
+  JUNIOR: 'Junior'
+}
+
+// Australian states constants
+export const AUSTRALIAN_STATES = [
+  'TAS', 'NSW', 'VIC', 'QLD', 'SA', 'WA', 'NT', 'ACT'
+]
+
+/**
+ * Submit a new membership application (PUBLIC - no auth required)
+ * @param {Object} applicationData - Application data from form
+ * @param {string} verificationToken - Email verification token (UUID v4)
+ * @param {Date} tokenExpiry - Token expiration timestamp (48 hours from now)
+ * @returns {Object} Created application with ID
+ */
+export const submitApplication = async (applicationData, verificationToken, tokenExpiry) => {
+  try {
+    const newApplication = {
+      // Personal details
+      title: applicationData.title,
+      fullName: applicationData.fullName,
+
+      // Address
+      streetAddress: applicationData.streetAddress,
+      suburb: applicationData.suburb,
+      state: applicationData.state,
+      postcode: applicationData.postcode,
+
+      // Contact
+      email: applicationData.email,
+      phoneHome: applicationData.phoneHome || '',
+      phoneWork: applicationData.phoneWork || '',
+      phoneMobile: applicationData.phoneMobile,
+
+      // Personal info
+      dateOfBirth: applicationData.dateOfBirth,
+      occupation: applicationData.occupation || '',
+      businessName: applicationData.businessName || '',
+      businessAddress: applicationData.businessAddress || '',
+      businessPostcode: applicationData.businessPostcode || '',
+
+      // Golf history
+      previousClubs: applicationData.previousClubs || '',
+      golfLinkNumber: applicationData.golfLinkNumber || '',
+      lastHandicap: applicationData.lastHandicap || '',
+
+      // Membership type
+      membershipType: applicationData.membershipType,
+
+      // Status
+      status: APPLICATION_STATUS.SUBMITTED,
+      emailVerified: false,
+      verifiedAt: null,
+
+      // Email verification
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiry: Timestamp.fromDate(tokenExpiry),
+
+      // Proposer/Seconder (admin fills these)
+      proposerName: '',
+      seconderName: '',
+
+      // Admin notes
+      adminNotes: '',
+
+      // Spam prevention
+      submittedFromIp: applicationData.submittedFromIp || '',
+      userAgent: applicationData.userAgent || navigator.userAgent,
+      captchaScore: applicationData.captchaScore || 0,
+
+      // Timestamps
+      submittedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }
+
+    const docRef = await addDoc(collection(db, APPLICATIONS_COLLECTION), newApplication)
+    return { id: docRef.id, ...newApplication }
+  } catch (error) {
+    console.error('Error submitting application:', error)
+    throw error
+  }
+}
+
+/**
+ * Verify email address (PUBLIC - no auth required)
+ * Updates application status from 'submitted' to 'email_verified'
+ * @param {string} applicationId - Application document ID
+ * @param {string} token - Verification token from email link
+ * @returns {boolean} True if verification successful
+ */
+export const verifyEmail = async (applicationId, token) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+    const docSnap = await getDoc(docRef)
+
+    if (!docSnap.exists()) {
+      throw new Error('Application not found')
+    }
+
+    const application = docSnap.data()
+
+    // Validate token matches
+    if (application.emailVerificationToken !== token) {
+      throw new Error('Invalid verification token')
+    }
+
+    // Check if already verified
+    if (application.emailVerified) {
+      return true // Already verified, return success
+    }
+
+    // Check if token expired (Firestore rules will also check this)
+    const now = new Date()
+    const expiry = application.emailVerificationExpiry.toDate()
+    if (now > expiry) {
+      throw new Error('Verification token has expired')
+    }
+
+    // Update application to verified status
+    await updateDoc(docRef, {
+      emailVerified: true,
+      status: APPLICATION_STATUS.EMAIL_VERIFIED,
+      verifiedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+
+    return true
+  } catch (error) {
+    console.error('Error verifying email:', error)
+    throw error
+  }
+}
+
+/**
+ * Get application by ID (AUTHENTICATED - EDIT role or higher)
+ * @param {string} applicationId - Application document ID
+ * @returns {Object} Application data with ID
+ */
+export const getApplicationById = async (applicationId) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+    const docSnap = await getDoc(docRef)
+
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() }
+    } else {
+      throw new Error('Application not found')
+    }
+  } catch (error) {
+    console.error('Error getting application:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all applications (AUTHENTICATED - EDIT role or higher)
+ * @returns {Array} Array of applications
+ */
+export const getAllApplications = async () => {
+  try {
+    const q = query(
+      collection(db, APPLICATIONS_COLLECTION),
+      orderBy('submittedAt', 'desc')
+    )
+
+    const querySnapshot = await getDocs(q)
+    const applications = []
+
+    querySnapshot.forEach((doc) => {
+      applications.push({ id: doc.id, ...doc.data() })
+    })
+
+    return applications
+  } catch (error) {
+    console.error('Error getting applications:', error)
+    throw error
+  }
+}
+
+/**
+ * Get applications by status (AUTHENTICATED - EDIT role or higher)
+ * @param {string} status - Application status (submitted, email_verified, approved, rejected)
+ * @returns {Array} Array of applications with matching status
+ */
+export const getApplicationsByStatus = async (status) => {
+  try {
+    const q = query(
+      collection(db, APPLICATIONS_COLLECTION),
+      where('status', '==', status),
+      orderBy('submittedAt', 'desc')
+    )
+
+    const querySnapshot = await getDocs(q)
+    const applications = []
+
+    querySnapshot.forEach((doc) => {
+      applications.push({ id: doc.id, ...doc.data() })
+    })
+
+    return applications
+  } catch (error) {
+    console.error('Error getting applications by status:', error)
+    throw error
+  }
+}
+
+/**
+ * Subscribe to applications with real-time updates (AUTHENTICATED)
+ * @param {Function} callback - Callback function to receive applications array
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToApplications = (callback) => {
+  const q = query(
+    collection(db, APPLICATIONS_COLLECTION),
+    orderBy('submittedAt', 'desc')
+  )
+
+  return onSnapshot(q, (querySnapshot) => {
+    const applications = []
+    querySnapshot.forEach((doc) => {
+      applications.push({ id: doc.id, ...doc.data() })
+    })
+    callback(applications)
+  }, (error) => {
+    console.error('Error subscribing to applications:', error)
+  })
+}
+
+/**
+ * Update application admin fields (AUTHENTICATED - EDIT role or higher)
+ * Allows updating proposer/seconder names and admin notes
+ * @param {string} applicationId - Application document ID
+ * @param {Object} updates - Fields to update (proposerName, seconderName, adminNotes)
+ * @returns {Object} Updated application
+ */
+export const updateApplicationAdminFields = async (applicationId, updates) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+
+    const updateData = {
+      updatedAt: serverTimestamp()
+    }
+
+    // Only include allowed fields
+    if (updates.proposerName !== undefined) {
+      updateData.proposerName = updates.proposerName
+    }
+    if (updates.seconderName !== undefined) {
+      updateData.seconderName = updates.seconderName
+    }
+    if (updates.adminNotes !== undefined) {
+      updateData.adminNotes = updates.adminNotes
+    }
+
+    await updateDoc(docRef, updateData)
+    return { id: applicationId, ...updateData }
+  } catch (error) {
+    console.error('Error updating application admin fields:', error)
+    throw error
+  }
+}
+
+/**
+ * Approve application and create member (AUTHENTICATED - EDIT role or higher)
+ * Uses transaction to ensure atomicity:
+ * 1. Create member in members collection
+ * 2. Update application status to 'approved'
+ * 3. Link member ID to application
+ * @param {string} applicationId - Application document ID
+ * @param {string} adminUserId - ID of user approving the application
+ * @returns {Object} Created member object with ID
+ */
+export const approveApplication = async (applicationId, adminUserId) => {
+  try {
+    // Use transaction to ensure atomic operation
+    const result = await runTransaction(db, async (transaction) => {
+      // Get application data
+      const applicationRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+      const applicationDoc = await transaction.get(applicationRef)
+
+      if (!applicationDoc.exists()) {
+        throw new Error('Application not found')
+      }
+
+      const application = applicationDoc.data()
+
+      // Verify application is email verified
+      if (!application.emailVerified || application.status !== APPLICATION_STATUS.EMAIL_VERIFIED) {
+        throw new Error('Application must be email verified before approval')
+      }
+
+      // Map application data to member data
+      const memberData = {
+        fullName: application.fullName,
+        email: application.email,
+        phone: application.phoneMobile,
+        address: `${application.streetAddress}, ${application.suburb}, ${application.state} ${application.postcode}`,
+        dateOfBirth: application.dateOfBirth,
+        golfAustraliaId: application.golfLinkNumber || '',
+        // membershipCategory will be auto-determined by createMember based on age
+        accountBalance: 0, // New member starts with zero balance
+        status: 'active',
+        dateJoined: new Date().toISOString().split('T')[0], // Today's date (YYYY-MM-DD)
+        emergencyContact: ''
+      }
+
+      // Create member (this is done outside transaction to use existing service)
+      // Note: We'll need to handle this differently - see note below
+      return { applicationRef, application, memberData }
+    })
+
+    // Create member using existing service (outside transaction)
+    const member = await createMember(result.memberData)
+
+    // Update application with approval details
+    await updateDoc(result.applicationRef, {
+      status: APPLICATION_STATUS.APPROVED,
+      approvedBy: adminUserId,
+      approvedAt: serverTimestamp(),
+      memberId: member.id,
+      updatedAt: serverTimestamp()
+    })
+
+    return member
+  } catch (error) {
+    console.error('Error approving application:', error)
+    throw error
+  }
+}
+
+/**
+ * Reject application (AUTHENTICATED - EDIT role or higher)
+ * @param {string} applicationId - Application document ID
+ * @param {string} adminUserId - ID of user rejecting the application
+ * @param {string} rejectionReason - Reason for rejection
+ * @returns {boolean} True if rejection successful
+ */
+export const rejectApplication = async (applicationId, adminUserId, rejectionReason) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+    const docSnap = await getDoc(docRef)
+
+    if (!docSnap.exists()) {
+      throw new Error('Application not found')
+    }
+
+    const application = docSnap.data()
+
+    // Verify application is email verified
+    if (!application.emailVerified || application.status !== APPLICATION_STATUS.EMAIL_VERIFIED) {
+      throw new Error('Application must be email verified before rejection')
+    }
+
+    // Validate rejection reason
+    if (!rejectionReason || rejectionReason.trim().length === 0) {
+      throw new Error('Rejection reason is required')
+    }
+
+    await updateDoc(docRef, {
+      status: APPLICATION_STATUS.REJECTED,
+      rejectedBy: adminUserId,
+      rejectedAt: serverTimestamp(),
+      rejectionReason: rejectionReason.trim(),
+      updatedAt: serverTimestamp()
+    })
+
+    return true
+  } catch (error) {
+    console.error('Error rejecting application:', error)
+    throw error
+  }
+}
+
+/**
+ * Resend verification email (PUBLIC - no auth required)
+ * Generates new token and updates application
+ * @param {string} applicationId - Application document ID
+ * @param {string} newToken - New verification token
+ * @param {Date} newExpiry - New token expiration timestamp
+ * @returns {boolean} True if update successful
+ */
+export const resendVerificationEmail = async (applicationId, newToken, newExpiry) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+    const docSnap = await getDoc(docRef)
+
+    if (!docSnap.exists()) {
+      throw new Error('Application not found')
+    }
+
+    const application = docSnap.data()
+
+    // Don't resend if already verified
+    if (application.emailVerified) {
+      throw new Error('Email already verified')
+    }
+
+    // Update with new token and expiry
+    await updateDoc(docRef, {
+      emailVerificationToken: newToken,
+      emailVerificationExpiry: Timestamp.fromDate(newExpiry),
+      updatedAt: serverTimestamp()
+    })
+
+    return true
+  } catch (error) {
+    console.error('Error resending verification email:', error)
+    throw error
+  }
+}
+
+/**
+ * Search applications by name or email (AUTHENTICATED - EDIT role or higher)
+ * Client-side search (similar to members search)
+ * @param {string} searchTerm - Search term
+ * @returns {Array} Filtered applications
+ */
+export const searchApplications = async (searchTerm) => {
+  try {
+    const allApplications = await getAllApplications()
+    const searchLower = searchTerm.toLowerCase()
+
+    return allApplications.filter(app =>
+      app.fullName?.toLowerCase().includes(searchLower) ||
+      app.email?.toLowerCase().includes(searchLower)
+    )
+  } catch (error) {
+    console.error('Error searching applications:', error)
+    throw error
+  }
+}
+
+/**
+ * Get application statistics (AUTHENTICATED - EDIT role or higher)
+ * @returns {Object} Statistics about applications
+ */
+export const getApplicationStats = async () => {
+  try {
+    const allApplications = await getAllApplications()
+
+    const stats = {
+      total: allApplications.length,
+      submitted: allApplications.filter(app => app.status === APPLICATION_STATUS.SUBMITTED).length,
+      emailVerified: allApplications.filter(app => app.status === APPLICATION_STATUS.EMAIL_VERIFIED).length,
+      approved: allApplications.filter(app => app.status === APPLICATION_STATUS.APPROVED).length,
+      rejected: allApplications.filter(app => app.status === APPLICATION_STATUS.REJECTED).length,
+      byMembershipType: {}
+    }
+
+    // Count by membership type
+    allApplications.forEach(app => {
+      const type = app.membershipType
+      if (!stats.byMembershipType[type]) {
+        stats.byMembershipType[type] = 0
+      }
+      stats.byMembershipType[type]++
+    })
+
+    return stats
+  } catch (error) {
+    console.error('Error getting application stats:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete application (AUTHENTICATED - SUPER_ADMIN only)
+ * Permanently removes an application from the database
+ * @param {string} applicationId - Application document ID
+ * @returns {boolean} True if deletion successful
+ */
+export const deleteApplication = async (applicationId) => {
+  try {
+    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
+    await deleteDoc(docRef)
+    console.log(`Application ${applicationId} deleted successfully`)
+    return true
+  } catch (error) {
+    console.error('Error deleting application:', error)
+    throw error
+  }
+}

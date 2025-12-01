@@ -11,6 +11,9 @@ const Members = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [balanceFilter, setBalanceFilter] = useState('all')
+  const [sortColumn, setSortColumn] = useState('fullName')
+  const [sortDirection, setSortDirection] = useState('asc')
 
   const canEdit = checkPermission(ROLES.EDIT)
 
@@ -56,11 +59,20 @@ const Members = () => {
         filtered = filtered.filter(member => member.membershipCategory === categoryFilter)
       }
 
+      // Apply balance filter
+      if (balanceFilter === 'positive') {
+        filtered = filtered.filter(member => (member.accountBalance || 0) > 0)
+      } else if (balanceFilter === 'negative') {
+        filtered = filtered.filter(member => (member.accountBalance || 0) < 0)
+      } else if (balanceFilter === 'zero') {
+        filtered = filtered.filter(member => (member.accountBalance || 0) === 0)
+      }
+
       setFilteredMembers(filtered)
     }
 
     applyFilters()
-  }, [members, searchTerm, statusFilter, categoryFilter])
+  }, [members, searchTerm, statusFilter, categoryFilter, balanceFilter])
 
   const handleExportCSV = () => {
     downloadMembersCSV(filteredMembers, `members-${new Date().toISOString().split('T')[0]}.csv`)
@@ -70,6 +82,58 @@ const Members = () => {
     if (balance > 0) return 'text-ocean-teal' // Positive = credit
     if (balance < 0) return 'text-red-600'   // Negative = owes money
     return 'text-gray-900'
+  }
+
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  // Sort filtered members based on current sort settings
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
+    let aValue = a[sortColumn]
+    let bValue = b[sortColumn]
+
+    // Handle different data types
+    if (sortColumn === 'accountBalance') {
+      aValue = parseFloat(aValue) || 0
+      bValue = parseFloat(bValue) || 0
+    } else if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase()
+      bValue = (bValue || '').toLowerCase()
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const SortIcon = ({ column }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      )
+    }
+    if (sortDirection === 'asc') {
+      return (
+        <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      )
+    }
+    return (
+      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    )
   }
 
   if (isLoading) {
@@ -89,7 +153,7 @@ const Members = () => {
           <h1 className="text-3xl font-bold text-gray-900">Members</h1>
           <p className="text-gray-600 mt-1">
             {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
-            {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' ? ' (filtered)' : ''}
+            {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || balanceFilter !== 'all' ? ' (filtered)' : ''}
           </p>
         </div>
         {canEdit && (
@@ -104,7 +168,7 @@ const Members = () => {
 
       {/* Filters */}
       <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="md:col-span-2">
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
               Search
@@ -151,6 +215,23 @@ const Members = () => {
               ))}
             </select>
           </div>
+
+          <div>
+            <label htmlFor="balance" className="block text-sm font-medium text-gray-700 mb-1">
+              Balance
+            </label>
+            <select
+              id="balance"
+              value={balanceFilter}
+              onChange={(e) => setBalanceFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+            >
+              <option value="all">All Balances</option>
+              <option value="positive">Positive (Credit)</option>
+              <option value="negative">Negative (Owing)</option>
+              <option value="zero">Zero Balance</option>
+            </select>
+          </div>
         </div>
 
         <div className="mt-4 flex justify-end">
@@ -173,20 +254,35 @@ const Members = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                <th
+                  onClick={() => handleSort('fullName')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                >
+                  Name <SortIcon column="fullName" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                <th
+                  onClick={() => handleSort('email')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                >
+                  Email <SortIcon column="email" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
+                <th
+                  onClick={() => handleSort('membershipCategory')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                >
+                  Category <SortIcon column="membershipCategory" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th
+                  onClick={() => handleSort('status')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                >
+                  Status <SortIcon column="status" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Balance
+                <th
+                  onClick={() => handleSort('accountBalance')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                >
+                  Balance <SortIcon column="accountBalance" />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -194,7 +290,7 @@ const Members = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMembers.map(member => {
+              {sortedMembers.map(member => {
                 const category = categories.find(c => c.id === member.membershipCategory)
                 return (
                   <tr key={member.id} className="hover:bg-gray-50">

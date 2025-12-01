@@ -10,8 +10,14 @@ import EditMember from './pages/EditMember'
 import MemberDetail from './pages/MemberDetail'
 import Payments from './pages/Payments'
 import Reports from './pages/Reports'
+import Applications from './pages/Applications'
+import AddApplication from './pages/AddApplication'
+import ApplicationDetails from './pages/ApplicationDetails'
 import Users from './pages/Users'
 import Admin from './pages/Admin'
+import ApplyForMembership from './pages/ApplyForMembership'
+import VerifyEmail from './pages/VerifyEmail'
+import ApplicationConfirmation from './pages/ApplicationConfirmation'
 import PrivateRoute from './components/PrivateRoute'
 import Layout from './components/Layout'
 
@@ -34,8 +40,14 @@ function App() {
       <AuthProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/apply" element={<ApplyForMembership />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/application-confirmation" element={<ApplicationConfirmation />} />
+
+            {/* Protected Routes */}
             <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
@@ -45,6 +57,9 @@ function App() {
               <Route path="members/:id/edit" element={<EditMember />} />
               <Route path="payments" element={<Payments />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="applications" element={<Applications />} />
+              <Route path="applications/add" element={<AddApplication />} />
+              <Route path="applications/:id" element={<ApplicationDetails />} />
               <Route path="users" element={<Users />} />
               <Route path="admin" element={<Admin />} />
             </Route>

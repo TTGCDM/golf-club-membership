@@ -14,7 +14,13 @@
       "Bash(npm run lint)",
       "Bash(npm run preview:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nv1.4.0: Dashboard Analytics & Report Enhancements\n\nNew Features:\n- Dashboard: Added year selector for payment status overview\n- Dashboard: Fixed member count calculations (now shows all outstanding members)\n- Dashboard: Year-specific payment totals in Payment Status Overview\n- Reports: Added TOTAL row to Outstanding Payments report (CSV & PDF)\n- Reports: Professional formatting with separator line in PDF totals\n\nBug Fixes:\n- Fixed Dashboard showing only top 5 members instead of all with outstanding balances\n- Fixed Payments page React hooks dependency order\n- Removed all unused variables causing ESLint errors\n\nCode Quality:\n- Full ESLint compliance with zero warnings\n- Production build verified and optimized\n- Clean code with no unused imports or variables\n\nDeployment:\n- Production ready and deployed to Firebase\n- Version bumped to 1.4.0\n- Documentation updated with complete changelog\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nv1.4.0: Dashboard Analytics & Report Enhancements\n\nNew Features:\n- Dashboard: Added year selector for payment status overview\n- Dashboard: Fixed member count calculations (now shows all outstanding members)\n- Dashboard: Year-specific payment totals in Payment Status Overview\n- Reports: Added TOTAL row to Outstanding Payments report (CSV & PDF)\n- Reports: Professional formatting with separator line in PDF totals\n\nBug Fixes:\n- Fixed Dashboard showing only top 5 members instead of all with outstanding balances\n- Fixed Payments page React hooks dependency order\n- Removed all unused variables causing ESLint errors\n\nCode Quality:\n- Full ESLint compliance with zero warnings\n- Production build verified and optimized\n- Clean code with no unused imports or variables\n\nDeployment:\n- Production ready and deployed to Firebase\n- Version bumped to 1.4.0\n- Documentation updated with complete changelog\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push)",
+      "SlashCommand(/run-prompt:*)",
+      "Bash(npx eslint:*)",
+      "Bash(test:*)",
+      "Bash(npm run deploy:rules:*)",
+      "Bash(firebase init:*)"
     ],
     "deny": [],
     "ask": []

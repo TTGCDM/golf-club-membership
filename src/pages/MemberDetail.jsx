@@ -5,6 +5,7 @@ import { getMemberById } from '../services/membersService'
 import { getAllCategories, calculateAge } from '../services/membershipCategories'
 import { getPaymentsByMember, formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
 import { getFeesByMember } from '../services/feeService'
+import { generateWelcomeLetter, generatePaymentReminder } from '../services/welcomeLetterService'
 
 const MemberDetail = () => {
   const { checkPermission, ROLES } = useAuth()
@@ -28,6 +29,30 @@ const MemberDetail = () => {
     } catch (err) {
       console.error('Error generating receipt:', err)
       setError('Failed to generate receipt')
+      setTimeout(() => setError(null), 3000)
+    }
+  }
+
+  const handleGenerateWelcomeLetter = async () => {
+    try {
+      await generateWelcomeLetter(id)
+      setSuccess('Welcome letter generated successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Error generating welcome letter:', err)
+      setError('Failed to generate welcome letter')
+      setTimeout(() => setError(null), 3000)
+    }
+  }
+
+  const handleGeneratePaymentReminder = async () => {
+    try {
+      await generatePaymentReminder(id)
+      setSuccess('Payment reminder generated successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Error generating payment reminder:', err)
+      setError('Failed to generate payment reminder')
       setTimeout(() => setError(null), 3000)
     }
   }
@@ -104,6 +129,22 @@ const MemberDetail = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleGenerateWelcomeLetter}
+            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
+            title="Generate welcome letter and information pack"
+          >
+            Welcome Letter
+          </button>
+          {member.accountBalance < 0 && (
+            <button
+              onClick={handleGeneratePaymentReminder}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              title="Generate payment reminder letter"
+            >
+              Payment Reminder
+            </button>
+          )}
           {canEdit && (
             <Link
               to={`/members/${id}/edit`}

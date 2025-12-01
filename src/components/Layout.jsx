@@ -6,6 +6,7 @@ const Layout = () => {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const canAccessApplications = checkPermission(ROLES.EDIT)
   const canAccessUsers = checkPermission(ROLES.ADMIN)
   const canAccessAdmin = checkPermission(ROLES.SUPER_ADMIN)
 
@@ -59,6 +60,14 @@ const Layout = () => {
                 >
                   Reports
                 </Link>
+                {canAccessApplications && (
+                  <Link
+                    to="/applications"
+                    className={`${isActive('/applications')} px-4 py-3 rounded-md text-base font-semibold hover:bg-white hover:text-ocean-navy transition-all duration-200`}
+                  >
+                    Applications
+                  </Link>
+                )}
                 {canAccessUsers && (
                   <Link
                     to="/users"
