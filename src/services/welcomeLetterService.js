@@ -1,11 +1,10 @@
 import jsPDF from 'jspdf'
 import { getMemberById } from './membersService'
 import { getAllCategories } from './membershipCategories'
-import { getPaymentsByMember } from './paymentsService'
-import { getFeesByMember } from './feeService'
 
 /**
  * Generate Welcome Letter and Information Pack PDF
+ * Matches the original Tea Tree Golf Club templates
  * @param {string} memberId - Member ID
  * @returns {Promise<boolean>} True if successful
  */
@@ -16,29 +15,44 @@ export const generateWelcomeLetter = async (memberId) => {
     const categories = await getAllCategories()
     const category = categories.find(c => c.id === member.membershipCategory)
 
+    // Calculate amount owing (negative balance = owes money)
+    const amountOwing = member.accountBalance < 0 ? Math.abs(member.accountBalance) : 0
+    const amountPaid = member.accountBalance >= 0 ? member.accountBalance : 0
+
+    // Parse name - handle "Last name, First name" format
+    let displayName = member.fullName
+    let firstName = member.fullName
+    if (member.fullName && member.fullName.includes(',')) {
+      const parts = member.fullName.split(',').map(p => p.trim())
+      const lastName = parts[0]
+      firstName = parts[1] || lastName
+      displayName = `${firstName} ${lastName}`
+    } else if (member.fullName && member.fullName.includes(' ')) {
+      // If no comma, assume "First Last" format - first name is first word
+      firstName = member.fullName.split(' ')[0]
+    }
+
     // Create new PDF document
     const doc = new jsPDF()
 
-    // Set up colors
-    const primaryColor = [41, 128, 185] // Blue
-    const textColor = [44, 62, 80] // Dark gray
-    const lightGray = [128, 128, 128]
+    // Colors
+    const blueColor = [0, 0, 255] // Blue for logo text
+    const blackColor = [0, 0, 0]
 
-    // ===== PAGE 1: WELCOME LETTER =====
+    // ===== PAGE 1: MEMBERSHIP ACCEPTANCE LETTER =====
 
-    // Club Logo Area / Header
-    doc.setFillColor(41, 128, 185)
-    doc.rect(0, 0, 210, 40, 'F')
+    // Header - Club Name
+    doc.setFontSize(24)
+    doc.setTextColor(...blueColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Tea Tree Golf Club', 105, 25, { align: 'center' })
 
-    doc.setFontSize(28)
-    doc.setTextColor(255, 255, 255)
-    doc.setFont(undefined, 'bold')
-    doc.text('Tea Tree Golf Club', 105, 20, { align: 'center' })
-
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
-    doc.text('10A Volcanic Drive, Brighton, Tasmania, 7030', 105, 28, { align: 'center' })
-    doc.text('Tel: 03 6268 1692 | Email: teatreegolf@bigpond.com', 105, 34, { align: 'center' })
+    // Club address
+    doc.setFontSize(10)
+    doc.setTextColor(...blackColor)
+    doc.setFont('helvetica', 'normal')
+    doc.text('10A Volcanic Drive, Brighton, Tasmania 7030', 105, 38, { align: 'center' })
+    doc.text('Tel: 03 62681692 or Email: teatreegolf@bigpond.com', 105, 44, { align: 'center' })
 
     // Date
     const today = new Date().toLocaleDateString('en-AU', {
@@ -47,263 +61,253 @@ export const generateWelcomeLetter = async (memberId) => {
       year: 'numeric'
     })
 
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-    doc.text(today, 20, 55)
-
-    // Member Address
-    let yPos = 65
-    doc.text(member.fullName, 20, yPos)
-    yPos += 5
-    doc.text(member.address, 20, yPos)
-
-    // Greeting
-    yPos += 15
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
-    doc.text('WELCOME TO TEA TREE GOLF CLUB', 20, yPos)
-
-    // Welcome Message
-    yPos += 12
+    let yPos = 60
     doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
+    doc.text(today, 20, yPos)
 
-    const welcomeText = `Dear ${member.fullName},
-
-On behalf of the Committee and Members of Tea Tree Golf Club, I am delighted to welcome you as a new member of our club.
-
-Tea Tree Golf Club has a proud history and a wonderful community of members who share a passion for golf. We are confident that you will enjoy the facilities, the course, and the friendly atmosphere that makes our club special.
-
-Your membership details are as follows:`
-
-    const welcomeLines = doc.splitTextToSize(welcomeText, 170)
-    doc.text(welcomeLines, 20, yPos)
-    yPos += welcomeLines.length * 5 + 5
-
-    // Membership Details Box
-    doc.setFillColor(240, 248, 255)
-    doc.roundedRect(20, yPos, 170, 45, 2, 2, 'F')
-    doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(0.5)
-    doc.roundedRect(20, yPos, 170, 45, 2, 2, 'S')
-
-    yPos += 8
-    const lineHeight = 6
-
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('MEMBERSHIP DETAILS', 25, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-
-    // Member Name
-    doc.setFont(undefined, 'bold')
-    doc.text('Member Name:', 25, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text(member.fullName, 80, yPos)
-    yPos += lineHeight
-
-    // Membership Category
-    doc.setFont(undefined, 'bold')
-    doc.text('Membership Type:', 25, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text(category?.name || member.membershipCategory, 80, yPos)
-    yPos += lineHeight
-
-    // Playing Rights
-    doc.setFont(undefined, 'bold')
-    doc.text('Playing Rights:', 25, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text(category?.playingRights || 'Full playing rights', 80, yPos)
-    yPos += lineHeight
-
-    // Date Joined
-    doc.setFont(undefined, 'bold')
-    doc.text('Date Joined:', 25, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text(member.dateJoined, 80, yPos)
-    yPos += lineHeight
-
-    // Golf Australia ID
-    if (member.golfAustraliaId) {
-      doc.setFont(undefined, 'bold')
-      doc.text('Golf Australia ID:', 25, yPos)
-      doc.setFont(undefined, 'normal')
-      doc.text(member.golfAustraliaId, 80, yPos)
+    // Member Name and Address
+    yPos += 10
+    doc.text(displayName, 20, yPos)
+    yPos += 5
+    if (member.address) {
+      doc.text(member.address, 20, yPos)
+      yPos += 5
     }
 
-    // Continue with welcome message
-    yPos += 15
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
+    // Greeting
+    yPos += 8
+    doc.text(`Dear ${firstName},`, 20, yPos)
 
-    const continueText = `We encourage you to get involved in club activities, competitions, and social events. Our club thrives on member participation, and we look forward to seeing you on the course.
+    // Main body - approval message
+    yPos += 10
+    const categoryName = category?.name || member.membershipCategory || 'Full'
 
-If you have any questions or require assistance, please do not hesitate to contact the club office.
+    let approvalText = `I am pleased to advise that your application for ${categoryName} Membership at Tea Tree Golf Club has been approved, subject to payment of your subscription fees.`
 
-Once again, welcome to Tea Tree Golf Club. We wish you many enjoyable rounds of golf!`
+    if (amountPaid > 0 && amountOwing > 0) {
+      approvalText += ` We have already received a $${amountPaid.toFixed(2)} payment toward your subscription, bringing your total amount owing to $${amountOwing.toFixed(2)}.`
+    } else if (amountOwing > 0) {
+      approvalText += ` Your total amount owing is $${amountOwing.toFixed(2)}.`
+    } else {
+      approvalText += ` Your subscription has been paid in full. Thank you!`
+    }
 
-    const continueLines = doc.splitTextToSize(continueText, 170)
-    doc.text(continueLines, 20, yPos)
-    yPos += continueLines.length * 5 + 10
+    const approvalLines = doc.splitTextToSize(approvalText, 170)
+    doc.text(approvalLines, 20, yPos)
+    yPos += approvalLines.length * 5 + 8
+
+    // Competition schedule
+    doc.text('Organized competitions are held on the following days:', 20, yPos)
+    yPos += 8
+
+    const dayLabelX = 20
+    const dayTextX = 50 // Aligned start position for all day descriptions
+
+    // Saturdays
+    doc.setFont('helvetica', 'bold')
+    doc.text('Saturdays:', dayLabelX, yPos)
+    doc.setFont('helvetica', 'normal')
+    const satText = 'There is a draw for starting times from 7:30 AM – 8:30 AM with a break until 10:30 AM - 12:00 noon'
+    const satLines = doc.splitTextToSize(satText, 140)
+    doc.text(satLines, dayTextX, yPos)
+    yPos += satLines.length * 5 + 3
+
+    // Tuesdays
+    doc.setFont('helvetica', 'bold')
+    doc.text('Tuesdays:', dayLabelX, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text('8:00 AM – 9:00 AM rolling start', dayTextX, yPos)
+    yPos += 7
+
+    // Wednesdays
+    doc.setFont('helvetica', 'bold')
+    doc.text('Wednesdays:', dayLabelX, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text("Lady members' competitions are held at 9:30 AM for a 10:00 AM start.", dayTextX, yPos)
+    yPos += 7
+
+    // Thursdays
+    doc.setFont('helvetica', 'bold')
+    doc.text('Thursdays:', dayLabelX, yPos)
+    doc.setFont('helvetica', 'normal')
+    const thursText = 'During daylight saving periods, a twilight competition is held. This is a nine-hole Stableford event commencing from 3:00 PM and is open to all members and visitors.'
+    const thursLines = doc.splitTextToSize(thursText, 140)
+    doc.text(thursLines, dayTextX, yPos)
+    yPos += thursLines.length * 5 + 5
+
+    // Website info
+    const websiteText = 'Information about Tea Tree Golf Club, including fixtures and results, can be found on our website: www.teatreegolfclub.com.au. We also have a Facebook page; please send a request to join.'
+    const websiteLines = doc.splitTextToSize(websiteText, 170)
+    doc.text(websiteLines, 20, yPos)
+    yPos += websiteLines.length * 5 + 5
+
+    // GolfLink info
+    doc.text('To obtain a GolfLink handicap, players are required to return three (3) competition cards.', 20, yPos)
+    yPos += 10
+
+    // Payment request if amount owing
+    if (amountOwing > 0) {
+      const paymentRequestText = `To finalise your membership, please arrange payment of $${amountOwing.toFixed(2)} at your earliest convenience using the bank details below.`
+      const paymentRequestLines = doc.splitTextToSize(paymentRequestText, 170)
+      doc.text(paymentRequestLines, 20, yPos)
+      yPos += paymentRequestLines.length * 5 + 5
+    }
+
+    // Closing
+    doc.text('I trust you will enjoy your membership at Tea Tree Golf Club.', 20, yPos)
+    yPos += 12
 
     // Signature
-    doc.setFont(undefined, 'normal')
     doc.text('Yours sincerely,', 20, yPos)
-    yPos += 15
-    doc.setFont(undefined, 'bold')
-    doc.text('The Committee', 20, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text('Tea Tree Golf Club', 20, yPos + 5)
+    yPos += 12
+    doc.text('David Moore', 20, yPos)
+    yPos += 5
+    doc.text('Secretary', 20, yPos)
+
+    // Payment footer - always show but highlight amount if owing
+    yPos = 265
+    doc.setFontSize(10)
+    if (amountOwing > 0) {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Amount to pay: $${amountOwing.toFixed(2)}`, 105, yPos, { align: 'center' })
+      yPos += 6
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.text('Payment to be made via EFT:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text('NAME: Tea Tree Golf Club Inc  BSB: 067 101  NUMBER: 2802 5959', 75, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('REFERENCE:', 85, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(` ${displayName}`, 110, yPos)
 
     // ===== PAGE 2: INFORMATION PACK =====
     doc.addPage()
 
-    // Header for Page 2
-    doc.setFillColor(41, 128, 185)
-    doc.rect(0, 0, 210, 30, 'F')
+    // Header - Club Name
+    doc.setFontSize(24)
+    doc.setTextColor(...blueColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Tea Tree Golf Club', 105, 25, { align: 'center' })
 
-    doc.setFontSize(20)
-    doc.setTextColor(255, 255, 255)
-    doc.setFont(undefined, 'bold')
-    doc.text('Member Information Pack', 105, 20, { align: 'center' })
+    // Club address
+    doc.setFontSize(10)
+    doc.setTextColor(...blackColor)
+    doc.setFont('helvetica', 'normal')
+    doc.text('10A Volcanic Drive, Brighton, Tasmania 7030', 105, 38, { align: 'center' })
+    doc.text('Tel: 03 62681692 or Email: teatreegolf@bigpond.com', 105, 44, { align: 'center' })
 
-    yPos = 45
+    // Title
+    yPos = 65
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Membership accepted', 105, yPos, { align: 'center' })
+    // Underline
+    doc.setLineWidth(0.5)
+    doc.setDrawColor(...blackColor)
+    const titleWidth = doc.getTextWidth('Membership accepted')
+    doc.line(105 - titleWidth/2, yPos + 1, 105 + titleWidth/2, yPos + 1)
+
+    // Intro paragraph
+    yPos += 12
     doc.setFontSize(11)
-    doc.setTextColor(...textColor)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
+    const introText = 'Congratulations and thank you for choosing to become a member of the Tea Tree Golf Club. Now that you are a member, we need to share a few key points so you can take full advantage of our facilities.'
+    const introLines = doc.splitTextToSize(introText, 170)
+    doc.text(introLines, 20, yPos)
+    yPos += introLines.length * 5 + 8
 
-    // Section 1: Contact Information
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Club Contact Information', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    doc.text('Address: 10A Volcanic Drive, Brighton, Tasmania, 7030', 20, yPos)
-    yPos += 5
-    doc.text('Telephone: 03 6268 1692', 20, yPos)
-    yPos += 5
-    doc.text('Email: teatreegolf@bigpond.com', 20, yPos)
-    yPos += 5
-    doc.text('Website: www.teatreegolfclub.com.au', 20, yPos)
-    yPos += 12
-
-    // Section 2: Playing Rights
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Your Playing Rights', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    doc.text(`As a ${category?.name || member.membershipCategory} member, you have:`, 20, yPos)
+    // Use of the course
+    doc.setFont('helvetica', 'bold')
+    doc.text('Use of the course:', 20, yPos)
     yPos += 6
-    doc.text(`• ${category?.playingRights || 'Full playing rights'}`, 25, yPos)
-    yPos += 5
-    doc.text('• Access to club facilities and amenities', 25, yPos)
-    yPos += 5
-    doc.text('• Participation in club competitions and events', 25, yPos)
-    yPos += 5
-    doc.text('• Voting rights at club meetings (full members)', 25, yPos)
-    yPos += 12
+    doc.setFont('helvetica', 'normal')
+    const courseText = 'You can use the course for social play at any time outside of organised competitions free of charge. We would ask that you ensure any non-members who play with you pay the required green fees before commencing play.'
+    const courseLines = doc.splitTextToSize(courseText, 170)
+    doc.text(courseLines, 20, yPos)
+    yPos += courseLines.length * 5 + 6
 
-    // Section 3: Course Etiquette
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Important Information', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    const etiquettePoints = [
-      'Please observe all club rules and course etiquette',
-      'Repair divots and pitch marks on greens',
-      'Maintain pace of play - a round should take no more than 4 hours',
-      'Observe dress code: collared shirts, tailored shorts/trousers',
-      'Mobile phones should be on silent mode on the course',
-      'Respect other members and guests at all times'
-    ]
-
-    etiquettePoints.forEach(point => {
-      doc.text(`• ${point}`, 25, yPos)
-      yPos += 6
-    })
-
-    yPos += 8
-
-    // Section 4: Competitions
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Club Competitions', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    const compText = `Tea Tree Golf Club runs regular competitions throughout the year, including:
-
-• Weekly competitions (check the notice board for details)
-• Monthly medal events
-• Club championships
-• Social events and twilight golf
-
-Competition sheets are available in the clubhouse. Please ensure you familiarize yourself with local rules and competition formats.`
-
+    // Competitions
+    doc.setFont('helvetica', 'bold')
+    doc.text('Competitions:', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
+    doc.text("Official competitions are held across the week and the schedule can be viewed online on the club's website.", 20, yPos)
+    yPos += 6
+    doc.setTextColor(...blueColor)
+    doc.text('https://www.teatreegolfclub.com.au/', 20, yPos)
+    doc.setTextColor(...blackColor)
+    yPos += 6
+    const compText = 'For Saturday competitions we recommend you book your tee time online, for other competitions you can just turn up to the club and the captain will assign you to a group.'
     const compLines = doc.splitTextToSize(compText, 170)
     doc.text(compLines, 20, yPos)
-    yPos += compLines.length * 5 + 10
+    yPos += compLines.length * 5 + 6
 
-    // Section 5: Fees & Payments
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Membership Fees & Payments', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    doc.text(`Annual Membership Fee: $${category?.annualFee || 'TBC'}`, 20, yPos)
+    // Handicaps
+    doc.setFont('helvetica', 'bold')
+    doc.text('Handicaps:', 20, yPos)
     yPos += 6
-    doc.text(`Current Account Balance: $${(member.accountBalance || 0).toFixed(2)}`, 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    const handicapText = 'If you possess a current GA handicap, you will be eligible to participate in all club competitions. If you do not, please contact the club captain (David Manning 0407495664) to commence the process for submitting the required number of cards to facilitate this. You will need to complete rounds within organised club competitions to receive a GA handicap, but while undertaking this process you will be ineligible to win any events.'
+    const handicapLines = doc.splitTextToSize(handicapText, 170)
+    doc.text(handicapLines, 20, yPos)
+    yPos += handicapLines.length * 5 + 6
+
+    // Code of conduct
+    doc.setFont('helvetica', 'bold')
+    doc.text('Code of conduct:', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
+    const conductText = "As a member of the Tea Tree Golf Club, we are all required to act and behave as per the guidelines within the club's code of conduct, please take the time to review these."
+    const conductLines = doc.splitTextToSize(conductText, 170)
+    doc.text(conductLines, 20, yPos)
+    yPos += conductLines.length * 5 + 2
+    doc.setTextColor(...blueColor)
+    doc.text('Tea Tree Golf Club Code of Conduct 2015', 20, yPos)
+    doc.setTextColor(...blackColor)
     yPos += 8
 
-    const paymentText = `Membership fees are due annually. Payment can be made by:
-• Bank transfer (please use your name as reference)
-• Cash or cheque at the club office
+    // Outstanding payments
+    doc.setFont('helvetica', 'bold')
+    doc.text('Outstanding payments:', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
+    const paymentIntro = 'If you have any outstanding owing on your club membership, we ask that you contact the treasurer to organise a plan to finalise this at your earliest convenience. Payments may be made via direct deposit as follows:'
+    const paymentIntroLines = doc.splitTextToSize(paymentIntro, 170)
+    doc.text(paymentIntroLines, 20, yPos)
+    yPos += paymentIntroLines.length * 5 + 4
 
-Please contact the club office if you have any questions about your account.`
+    doc.setFont('helvetica', 'bold')
+    doc.text('Account Name:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(' Tea Tree Golf Club', 52, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('BSB:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(' 067101  Account : 2802 5959', 30, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('Reference:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(' Full name', 42, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text("Treasurers contact details", 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(' - Kathy Manning 0408 521 963 katmanning4@yahoo.com', 65, yPos)
+    yPos += 8
 
-    const paymentLines = doc.splitTextToSize(paymentText, 170)
-    doc.text(paymentLines, 20, yPos)
+    // Facebook
+    const fbText = 'We invite you to join our club group on Facebook, Tea Tree Golf Club, where club updates and competition results are shared.'
+    const fbLines = doc.splitTextToSize(fbText, 170)
+    doc.text(fbLines, 20, yPos)
+    yPos += fbLines.length * 5 + 12
 
-    // Footer
-    const footerY = 280
-    doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(0.5)
-    doc.line(20, footerY, 190, footerY)
-
-    doc.setFontSize(9)
-    doc.setTextColor(...lightGray)
-    doc.text('Tea Tree Golf Club - Member Information Pack', 105, footerY + 5, { align: 'center' })
-    doc.setFontSize(8)
-    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, footerY + 10, { align: 'center' })
+    // Welcome message
+    doc.setFont('helvetica', 'bold')
+    doc.text('Welcome to the club!', 105, yPos, { align: 'center' })
 
     // Save the PDF
     const fileName = `Welcome-Letter-${member.fullName.replace(/\s+/g, '-')}.pdf`
@@ -323,40 +327,45 @@ Please contact the club office if you have any questions about your account.`
  */
 export const generatePaymentReminder = async (memberId) => {
   try {
-    // Get member details, payments, and fees
+    // Get member details
     const member = await getMemberById(memberId)
     const categories = await getAllCategories()
     const category = categories.find(c => c.id === member.membershipCategory)
-    const payments = await getPaymentsByMember(memberId)
-    const fees = await getFeesByMember(memberId)
 
-    // Calculate totals
-    const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0)
-    const totalFees = fees.reduce((sum, f) => sum + f.amount, 0)
-    const balance = member.accountBalance || 0
+    // Calculate amount owing (negative balance = owes money)
+    const amountOwing = member.accountBalance < 0 ? Math.abs(member.accountBalance) : 0
+
+    // Parse name - handle "Last name, First name" format
+    let displayName = member.fullName
+    let firstName = member.fullName
+    if (member.fullName && member.fullName.includes(',')) {
+      const parts = member.fullName.split(',').map(p => p.trim())
+      const lastName = parts[0]
+      firstName = parts[1] || lastName
+      displayName = `${firstName} ${lastName}`
+    } else if (member.fullName && member.fullName.includes(' ')) {
+      firstName = member.fullName.split(' ')[0]
+    }
 
     // Create new PDF document
     const doc = new jsPDF()
 
-    // Set up colors
-    const primaryColor = [41, 128, 185] // Blue
-    const textColor = [44, 62, 80] // Dark gray
-    const lightGray = [128, 128, 128]
-    const redColor = [211, 47, 47]
+    // Colors
+    const blueColor = [0, 0, 255]
+    const blackColor = [0, 0, 0]
 
-    // ===== HEADER =====
-    doc.setFillColor(41, 128, 185)
-    doc.rect(0, 0, 210, 40, 'F')
+    // Header - Club Name
+    doc.setFontSize(24)
+    doc.setTextColor(...blueColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Tea Tree Golf Club', 105, 25, { align: 'center' })
 
-    doc.setFontSize(28)
-    doc.setTextColor(255, 255, 255)
-    doc.setFont(undefined, 'bold')
-    doc.text('Tea Tree Golf Club', 105, 20, { align: 'center' })
-
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
-    doc.text('10A Volcanic Drive, Brighton, Tasmania, 7030', 105, 28, { align: 'center' })
-    doc.text('Tel: 03 6268 1692 | Email: teatreegolf@bigpond.com', 105, 34, { align: 'center' })
+    // Club address
+    doc.setFontSize(10)
+    doc.setTextColor(...blackColor)
+    doc.setFont('helvetica', 'normal')
+    doc.text('10A Volcanic Drive, Brighton, Tasmania 7030', 105, 38, { align: 'center' })
+    doc.text('Tel: 03 62681692 or Email: teatreegolf@bigpond.com', 105, 44, { align: 'center' })
 
     // Date
     const today = new Date().toLocaleDateString('en-AU', {
@@ -365,242 +374,162 @@ export const generatePaymentReminder = async (memberId) => {
       year: 'numeric'
     })
 
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-    doc.text(today, 20, 55)
+    let yPos = 60
+    doc.setFontSize(11)
+    doc.text(today, 20, yPos)
 
-    // Member Address
-    let yPos = 65
-    doc.text(member.fullName, 20, yPos)
+    // Member Name and Address
+    yPos += 10
+    doc.text(displayName, 20, yPos)
     yPos += 5
-    doc.text(member.address, 20, yPos)
-
-    // Subject line
-    yPos += 15
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
-    doc.text('RE: Outstanding Membership Account', 20, yPos)
+    if (member.address) {
+      doc.text(member.address, 20, yPos)
+      yPos += 5
+    }
 
     // Greeting
-    yPos += 12
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
-    doc.text(`Dear ${member.fullName},`, 20, yPos)
+    yPos += 8
+    doc.text(`Dear ${firstName},`, 20, yPos)
 
-    // Opening paragraph
+    // Main body
     yPos += 10
-    const openingText = `We hope you are enjoying your membership at Tea Tree Golf Club.
+    const categoryName = category?.name || member.membershipCategory || 'Full'
 
-We are writing to you regarding your membership account, which currently has an outstanding balance. We kindly request that you attend to this matter at your earliest convenience.`
+    const openingText = `We hope you are enjoying your membership at Tea Tree Golf Club. We are writing to advise that your ${categoryName} Membership account currently has an outstanding balance of $${amountOwing.toFixed(2)}.`
 
     const openingLines = doc.splitTextToSize(openingText, 170)
     doc.text(openingLines, 20, yPos)
     yPos += openingLines.length * 5 + 8
 
-    // Account Summary Box
-    doc.setFillColor(255, 245, 245) // Light red background
-    doc.roundedRect(20, yPos, 170, 35, 2, 2, 'F')
-    doc.setDrawColor(...redColor)
-    doc.setLineWidth(0.5)
-    doc.roundedRect(20, yPos, 170, 35, 2, 2, 'S')
+    // Payment request
+    const paymentRequestText = `We kindly request that you arrange payment of $${amountOwing.toFixed(2)} at your earliest convenience using the bank details provided below.`
+    const paymentRequestLines = doc.splitTextToSize(paymentRequestText, 170)
+    doc.text(paymentRequestLines, 20, yPos)
+    yPos += paymentRequestLines.length * 5 + 8
 
-    yPos += 8
-    const lineHeight = 6
+    // If already paid notice
+    const noticeText = 'If you have already made this payment, please accept our apologies and disregard this reminder.'
+    const noticeLines = doc.splitTextToSize(noticeText, 170)
+    doc.text(noticeLines, 20, yPos)
+    yPos += noticeLines.length * 5 + 8
 
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...redColor)
-    doc.setFontSize(12)
-    doc.text('ACCOUNT SUMMARY', 25, yPos)
-    yPos += 8
+    // Contact info
+    const contactText = 'Should you have any questions about your account or wish to discuss payment arrangements, please do not hesitate to contact the treasurer:'
+    const contactLines = doc.splitTextToSize(contactText, 170)
+    doc.text(contactLines, 20, yPos)
+    yPos += contactLines.length * 5 + 5
 
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-
-    // Outstanding Balance
-    doc.setFont(undefined, 'bold')
-    doc.text('Outstanding Balance:', 25, yPos)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...redColor)
-    doc.setFontSize(14)
-    doc.text(`$${Math.abs(balance).toFixed(2)}`, 80, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-    doc.setFont(undefined, 'normal')
-
-    // Membership Type
-    doc.setFont(undefined, 'bold')
-    doc.text('Membership Type:', 25, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text(category?.name || member.membershipCategory, 80, yPos)
-
-    yPos += 18
-
-    // Transaction Details
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Account Details', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setTextColor(...textColor)
-    doc.setFont(undefined, 'normal')
-
-    // Table header
-    doc.setFillColor(240, 248, 255)
-    doc.rect(20, yPos - 2, 170, 8, 'F')
-    doc.setFont(undefined, 'bold')
-    doc.text('Description', 25, yPos + 3)
-    doc.text('Amount', 165, yPos + 3, { align: 'right' })
+    doc.text('Kathy Manning - 0408 521 963 - katmanning4@yahoo.com', 20, yPos)
     yPos += 10
-
-    doc.setFont(undefined, 'normal')
-
-    // Fees Applied
-    if (fees.length > 0) {
-      doc.setFont(undefined, 'bold')
-      doc.text('Fees Applied:', 25, yPos)
-      yPos += lineHeight
-
-      doc.setFont(undefined, 'normal')
-      fees.forEach(fee => {
-        const description = `${fee.feeYear} ${fee.categoryName} Fee`
-        doc.text(description, 30, yPos)
-        doc.setTextColor(...redColor)
-        doc.text(`-$${fee.amount.toFixed(2)}`, 165, yPos, { align: 'right' })
-        doc.setTextColor(...textColor)
-        yPos += lineHeight
-      })
-      yPos += 3
-    }
-
-    // Total Fees
-    doc.setFont(undefined, 'bold')
-    doc.text('Total Fees:', 25, yPos)
-    doc.setTextColor(...redColor)
-    doc.text(`-$${totalFees.toFixed(2)}`, 165, yPos, { align: 'right' })
-    doc.setTextColor(...textColor)
-    yPos += 8
-
-    // Payments Received
-    if (payments.length > 0) {
-      doc.setFont(undefined, 'bold')
-      doc.text('Payments Received:', 25, yPos)
-      yPos += lineHeight
-
-      doc.setFont(undefined, 'normal')
-      payments.slice(0, 5).forEach(payment => {
-        const description = `Payment - ${payment.paymentDate}`
-        doc.text(description, 30, yPos)
-        doc.setTextColor(46, 125, 50) // Green
-        doc.text(`+$${payment.amount.toFixed(2)}`, 165, yPos, { align: 'right' })
-        doc.setTextColor(...textColor)
-        yPos += lineHeight
-      })
-
-      if (payments.length > 5) {
-        doc.setFont(undefined, 'italic')
-        doc.text(`... and ${payments.length - 5} more payment(s)`, 30, yPos)
-        yPos += lineHeight
-      }
-      yPos += 3
-    }
-
-    // Total Payments
-    doc.setFont(undefined, 'bold')
-    doc.text('Total Payments:', 25, yPos)
-    doc.setTextColor(46, 125, 50)
-    doc.text(`+$${totalPayments.toFixed(2)}`, 165, yPos, { align: 'right' })
-    doc.setTextColor(...textColor)
-    yPos += 10
-
-    // Balance line
-    doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(0.5)
-    doc.line(25, yPos, 185, yPos)
-    yPos += 8
-
-    // Current Balance
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
-    doc.text('Current Balance:', 25, yPos)
-    doc.setTextColor(...redColor)
-    doc.setFontSize(14)
-    doc.text(`$${balance.toFixed(2)}`, 165, yPos, { align: 'right' })
-    yPos += 15
-
-    // Payment Instructions
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Payment Options', 20, yPos)
-    yPos += 8
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(...textColor)
-
-    const paymentText = `To settle your outstanding balance of $${Math.abs(balance).toFixed(2)}, please use one of the following payment methods:
-
-1. Bank Transfer
-   Account Name: Tea Tree Golf Club
-   BSB: [Your BSB]
-   Account Number: [Your Account Number]
-   Reference: ${member.fullName}
-
-2. In Person
-   Visit the club office during business hours with cash or cheque
-
-3. Credit Card
-   Contact the club office on 03 6268 1692
-
-Please ensure you include your name as the payment reference to help us identify your payment promptly.`
-
-    const paymentLines = doc.splitTextToSize(paymentText, 170)
-    doc.text(paymentLines, 20, yPos)
-    yPos += paymentLines.length * 5 + 10
 
     // Closing
-    const closingText = `If you have already made payment, please accept our apologies for this reminder and disregard this letter.
-
-Should you have any questions about your account or wish to discuss payment arrangements, please do not hesitate to contact us.
-
-Thank you for your continued membership and support of Tea Tree Golf Club.`
-
-    const closingLines = doc.splitTextToSize(closingText, 170)
-    doc.text(closingLines, 20, yPos)
-    yPos += closingLines.length * 5 + 8
+    doc.text('Thank you for your continued membership and support of Tea Tree Golf Club.', 20, yPos)
+    yPos += 12
 
     // Signature
-    doc.setFont(undefined, 'normal')
     doc.text('Yours sincerely,', 20, yPos)
-    yPos += 10
-    doc.setFont(undefined, 'bold')
-    doc.text('The Treasurer', 20, yPos)
-    doc.setFont(undefined, 'normal')
-    doc.text('Tea Tree Golf Club', 20, yPos + 5)
+    yPos += 12
+    doc.text('Kathy Manning', 20, yPos)
+    yPos += 5
+    doc.text('Treasurer', 20, yPos)
 
-    // Footer
-    const footerY = 280
-    doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(0.5)
-    doc.line(20, footerY, 190, footerY)
-
-    doc.setFontSize(9)
-    doc.setTextColor(...lightGray)
-    doc.text('Tea Tree Golf Club - Payment Reminder', 105, footerY + 5, { align: 'center' })
-    doc.setFontSize(8)
-    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, footerY + 10, { align: 'center' })
+    // Payment footer - same as welcome letter
+    yPos = 265
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`Amount to pay: $${amountOwing.toFixed(2)}`, 105, yPos, { align: 'center' })
+    yPos += 6
+    doc.text('Payment to be made via EFT:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text('NAME: Tea Tree Golf Club Inc  BSB: 067 101  NUMBER: 2802 5959', 75, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('REFERENCE:', 85, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(` ${displayName}`, 110, yPos)
 
     // Save the PDF
-    const fileName = `Payment-Reminder-${member.fullName.replace(/\s+/g, '-')}.pdf`
+    const fileName = `Payment-Reminder-${displayName.replace(/\s+/g, '-')}.pdf`
     doc.save(fileName)
 
     return true
   } catch (error) {
     console.error('Error generating payment reminder:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all members with outstanding balances (negative account balance)
+ * @returns {Promise<Array>} Array of members with outstanding balances
+ */
+export const getMembersWithOutstandingBalance = async () => {
+  const { getAllMembers } = await import('./membersService')
+  const members = await getAllMembers()
+
+  // Filter active members with negative balance (owing money)
+  return members
+    .filter(m => m.status === 'active' && m.accountBalance < 0)
+    .sort((a, b) => a.accountBalance - b.accountBalance) // Most owing first
+}
+
+/**
+ * Generate bulk payment reminder PDFs for all members with outstanding balances
+ * Downloads each PDF individually with a short delay to prevent browser issues
+ * @param {Function} onProgress - Callback function called with progress updates { current, total, memberName }
+ * @returns {Promise<Object>} Results { successful, failed, total, details }
+ */
+export const generateBulkPaymentReminders = async (onProgress = null) => {
+  try {
+    const members = await getMembersWithOutstandingBalance()
+
+    const results = {
+      successful: 0,
+      failed: 0,
+      total: members.length,
+      details: []
+    }
+
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i]
+
+      if (onProgress) {
+        onProgress({
+          current: i + 1,
+          total: members.length,
+          memberName: member.fullName
+        })
+      }
+
+      try {
+        await generatePaymentReminder(member.id)
+        results.successful++
+        results.details.push({
+          memberId: member.id,
+          memberName: member.fullName,
+          amountOwing: Math.abs(member.accountBalance),
+          status: 'success'
+        })
+      } catch (error) {
+        results.failed++
+        results.details.push({
+          memberId: member.id,
+          memberName: member.fullName,
+          amountOwing: Math.abs(member.accountBalance),
+          status: 'failed',
+          error: error.message
+        })
+      }
+
+      // Small delay between downloads to prevent browser issues
+      if (i < members.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.error('Error generating bulk payment reminders:', error)
     throw error
   }
 }

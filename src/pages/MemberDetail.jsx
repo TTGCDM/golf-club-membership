@@ -3,12 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMemberById } from '../services/membersService'
 import { getAllCategories, calculateAge } from '../services/membershipCategories'
-import { getPaymentsByMember, formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
-import { getFeesByMember } from '../services/feeService'
+import { getPaymentsByMember, formatPaymentMethod, generatePDFReceipt, recordPayment } from '../services/paymentsService'
+import { getFeesByMember, applyFeeToMember } from '../services/feeService'
 import { generateWelcomeLetter, generatePaymentReminder } from '../services/welcomeLetterService'
 
 const MemberDetail = () => {
-  const { checkPermission, ROLES } = useAuth()
+  const { checkPermission, ROLES, currentUser } = useAuth()
   const [member, setMember] = useState(null)
   const [payments, setPayments] = useState([])
   const [fees, setFees] = useState([])
@@ -16,6 +16,22 @@ const MemberDetail = () => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [category, setCategory] = useState(null)
+  const [showFeeModal, setShowFeeModal] = useState(false)
+  const [feeFormData, setFeeFormData] = useState({
+    amount: '',
+    feeYear: new Date().getFullYear(),
+    notes: ''
+  })
+  const [isSubmittingFee, setIsSubmittingFee] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentFormData, setPaymentFormData] = useState({
+    amount: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: 'bank_transfer',
+    reference: '',
+    notes: ''
+  })
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
   const { id } = useParams()
 
 
@@ -54,6 +70,111 @@ const MemberDetail = () => {
       console.error('Error generating payment reminder:', err)
       setError('Failed to generate payment reminder')
       setTimeout(() => setError(null), 3000)
+    }
+  }
+
+  const handleOpenFeeModal = () => {
+    // Pre-fill with category annual fee if available
+    setFeeFormData({
+      amount: category?.annualFee || '',
+      feeYear: new Date().getFullYear(),
+      notes: `${new Date().getFullYear()} Annual Membership Fee`
+    })
+    setShowFeeModal(true)
+  }
+
+  const handleRecordFee = async (e) => {
+    e.preventDefault()
+    setIsSubmittingFee(true)
+    setError(null)
+
+    try {
+      const feeData = {
+        memberId: id,
+        memberName: member.fullName,
+        amount: parseFloat(feeFormData.amount),
+        feeYear: parseInt(feeFormData.feeYear),
+        notes: feeFormData.notes,
+        categoryId: member.membershipCategory,
+        categoryName: category?.name || member.membershipCategory
+      }
+
+      await applyFeeToMember(feeData, currentUser.uid)
+
+      // Refresh data
+      const [updatedMember, updatedFees] = await Promise.all([
+        getMemberById(id),
+        getFeesByMember(id)
+      ])
+      setMember(updatedMember)
+      setFees(updatedFees)
+
+      setSuccess('Fee recorded successfully!')
+      setShowFeeModal(false)
+      setFeeFormData({ amount: '', feeYear: new Date().getFullYear(), notes: '' })
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Error recording fee:', err)
+      setError('Failed to record fee')
+    } finally {
+      setIsSubmittingFee(false)
+    }
+  }
+
+  const handleOpenPaymentModal = () => {
+    // Pre-fill amount with outstanding balance if member owes money
+    const outstandingAmount = member.accountBalance < 0 ? Math.abs(member.accountBalance) : ''
+    setPaymentFormData({
+      amount: outstandingAmount,
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: 'bank_transfer',
+      reference: '',
+      notes: ''
+    })
+    setShowPaymentModal(true)
+  }
+
+  const handleRecordPayment = async (e) => {
+    e.preventDefault()
+    setIsSubmittingPayment(true)
+    setError(null)
+
+    try {
+      const paymentData = {
+        memberId: id,
+        memberName: member.fullName,
+        amount: parseFloat(paymentFormData.amount),
+        paymentDate: paymentFormData.paymentDate,
+        paymentMethod: paymentFormData.paymentMethod,
+        reference: paymentFormData.reference,
+        notes: paymentFormData.notes
+      }
+
+      await recordPayment(paymentData, currentUser.uid)
+
+      // Refresh data
+      const [updatedMember, updatedPayments] = await Promise.all([
+        getMemberById(id),
+        getPaymentsByMember(id)
+      ])
+      setMember(updatedMember)
+      setPayments(updatedPayments)
+
+      setSuccess('Payment recorded successfully!')
+      setShowPaymentModal(false)
+      setPaymentFormData({
+        amount: '',
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentMethod: 'bank_transfer',
+        reference: '',
+        notes: ''
+      })
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Error recording payment:', err)
+      setError('Failed to record payment')
+    } finally {
+      setIsSubmittingPayment(false)
     }
   }
 
@@ -186,12 +307,20 @@ const MemberDetail = () => {
                 </p>
               </div>
               {canEdit && (
-                <Link
-                  to={`/payments?member=${id}`}
-                  className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
-                >
-                  Record Payment
-                </Link>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleOpenPaymentModal}
+                    className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
+                  >
+                    Record Payment
+                  </button>
+                  <button
+                    onClick={handleOpenFeeModal}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Record Fee
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -384,6 +513,208 @@ const MemberDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Record Fee Modal */}
+      {showFeeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Record Fee</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Recording fee for: <strong>{member.fullName}</strong>
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleRecordFee}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="feeAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    id="feeAmount"
+                    step="0.01"
+                    min="0"
+                    value={feeFormData.amount}
+                    onChange={(e) => setFeeFormData({ ...feeFormData, amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="feeYear" className="block text-sm font-medium text-gray-700 mb-1">
+                    Fee Year
+                  </label>
+                  <input
+                    type="number"
+                    id="feeYear"
+                    min="2020"
+                    max="2030"
+                    value={feeFormData.feeYear}
+                    onChange={(e) => setFeeFormData({ ...feeFormData, feeYear: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="feeNotes" className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <input
+                    type="text"
+                    id="feeNotes"
+                    value={feeFormData.notes}
+                    onChange={(e) => setFeeFormData({ ...feeFormData, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    placeholder="e.g., 2025 Annual Membership Fee"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFeeModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={isSubmittingFee}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                  disabled={isSubmittingFee}
+                >
+                  {isSubmittingFee ? 'Recording...' : 'Record Fee'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Record Payment</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Recording payment for: <strong>{member.fullName}</strong>
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleRecordPayment}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    id="paymentAmount"
+                    step="0.01"
+                    min="0"
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    id="paymentDate"
+                    value={paymentFormData.paymentDate}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentFormData.paymentMethod}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    required
+                  >
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cash">Cash</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="card">Card</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="paymentReference" className="block text-sm font-medium text-gray-700 mb-1">
+                    Reference (optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="paymentReference"
+                    value={paymentFormData.reference}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, reference: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    placeholder="e.g., Transfer ID, Cheque number"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="paymentNotes" className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes (optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="paymentNotes"
+                    value={paymentFormData.notes}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    placeholder="Any additional notes"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={isSubmittingPayment}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
+                  disabled={isSubmittingPayment}
+                >
+                  {isSubmittingPayment ? 'Recording...' : 'Record Payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,7 +15,6 @@ export const generateApplicationPDF = (application) => {
     })
 
     // Colors
-    const primaryColor = [41, 128, 185] // Blue
     const textColor = [0, 0, 0] // Black
 
     // Page margins

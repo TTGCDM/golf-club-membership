@@ -213,6 +213,60 @@ export const applyAnnualFees = async (year, categoryFees = {}, userId) => {
 }
 
 /**
+ * Apply a single fee to a specific member
+ * @param {Object} feeData - Fee data { memberId, memberName, amount, feeYear, notes }
+ * @param {string} userId - ID of user applying the fee
+ * @returns {Object} The created fee record
+ */
+export const applyFeeToMember = async (feeData, userId) => {
+  try {
+    const { memberId, memberName, amount, feeYear, notes, categoryId, categoryName } = feeData
+
+    // Use transaction to ensure atomicity
+    const feeId = await runTransaction(db, async (transaction) => {
+      const memberRef = doc(db, 'members', memberId)
+      const memberDoc = await transaction.get(memberRef)
+
+      if (!memberDoc.exists()) {
+        throw new Error('Member not found')
+      }
+
+      const currentBalance = memberDoc.data().accountBalance || 0
+      const newBalance = currentBalance - amount // Subtract fee (increases debt or reduces credit)
+
+      // Update member balance
+      transaction.update(memberRef, {
+        accountBalance: newBalance,
+        updatedAt: serverTimestamp()
+      })
+
+      // Create fee record
+      const feeRef = doc(collection(db, FEES_COLLECTION))
+      transaction.set(feeRef, {
+        memberId,
+        memberName,
+        feeYear: feeYear || new Date().getFullYear(),
+        categoryId: categoryId || 'manual',
+        categoryName: categoryName || 'Manual Fee',
+        amount,
+        appliedDate: new Date().toISOString().split('T')[0],
+        appliedBy: userId,
+        notes: notes || `Fee applied - $${amount}`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+
+      return feeRef.id
+    })
+
+    return { id: feeId, ...feeData }
+  } catch (error) {
+    console.error('Error applying fee to member:', error)
+    throw error
+  }
+}
+
+/**
  * Get all fees for a specific member
  * @param {string} memberId - The member ID
  * @returns {Array} Array of fee records

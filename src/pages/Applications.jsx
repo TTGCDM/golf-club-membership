@@ -4,6 +4,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { getAllApplications, deleteApplication, APPLICATION_STATUS } from '../services/applicationsService'
 
+// SortIcon component moved outside to avoid re-creation during render
+const SortIcon = ({ column, sortColumn, sortDirection }) => {
+  if (sortColumn !== column) {
+    return (
+      <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    )
+  }
+  if (sortDirection === 'asc') {
+    return (
+      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
 const Applications = () => {
   const { checkPermission, ROLES } = useAuth()
   const queryClient = useQueryClient()
@@ -12,16 +35,6 @@ const Applications = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortColumn, setSortColumn] = useState('submittedAt')
   const [sortDirection, setSortDirection] = useState('desc')
-
-  // Check permission
-  if (!checkPermission(ROLES.EDIT)) {
-    return (
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
-        <p className="text-gray-600">You do not have permission to view applications.</p>
-      </div>
-    )
-  }
 
   // Fetch applications with React Query (cached)
   const { data: applications = [], isLoading } = useQuery({
@@ -39,12 +52,6 @@ const Applications = () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
     }
   })
-
-  const handleDelete = (application) => {
-    if (window.confirm(`Are you sure you want to delete the application from ${application.fullName}? This action cannot be undone.`)) {
-      deleteMutation.mutate(application.id)
-    }
-  }
 
   useEffect(() => {
     const applyFilters = () => {
@@ -69,6 +76,22 @@ const Applications = () => {
 
     applyFilters()
   }, [applications, searchTerm, statusFilter])
+
+  // Check permission
+  if (!checkPermission(ROLES.EDIT)) {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
+        <p className="text-gray-600">You do not have permission to view applications.</p>
+      </div>
+    )
+  }
+
+  const handleDelete = (application) => {
+    if (window.confirm(`Are you sure you want to delete the application from ${application.fullName}? This action cannot be undone.`)) {
+      deleteMutation.mutate(application.id)
+    }
+  }
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -137,28 +160,6 @@ const Applications = () => {
     if (!timestamp) return 'N/A'
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
     return date.toLocaleDateString()
-  }
-
-  const SortIcon = ({ column }) => {
-    if (sortColumn !== column) {
-      return (
-        <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      )
-    }
-    if (sortDirection === 'asc') {
-      return (
-        <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      )
-    }
-    return (
-      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    )
   }
 
   if (isLoading) {
@@ -240,19 +241,19 @@ const Applications = () => {
                   onClick={() => handleSort('submittedAt')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Submitted <SortIcon column="submittedAt" />
+                  Submitted <SortIcon column="submittedAt" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('fullName')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Name <SortIcon column="fullName" />
+                  Name <SortIcon column="fullName" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('email')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Email <SortIcon column="email" />
+                  Email <SortIcon column="email" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Phone
@@ -261,13 +262,13 @@ const Applications = () => {
                   onClick={() => handleSort('membershipType')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Type <SortIcon column="membershipType" />
+                  Type <SortIcon column="membershipType" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('status')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Status <SortIcon column="status" />
+                  Status <SortIcon column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions

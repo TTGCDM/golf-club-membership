@@ -5,6 +5,29 @@ import { useAuth } from '../contexts/AuthContext'
 import { downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
 
+// SortIcon component moved outside to avoid re-creation during render
+const SortIcon = ({ column, sortColumn, sortDirection }) => {
+  if (sortColumn !== column) {
+    return (
+      <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    )
+  }
+  if (sortDirection === 'asc') {
+    return (
+      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
 const Members = () => {
   const { checkPermission, ROLES } = useAuth()
   const [filteredMembers, setFilteredMembers] = useState([])
@@ -113,28 +136,6 @@ const Members = () => {
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
     return 0
   })
-
-  const SortIcon = ({ column }) => {
-    if (sortColumn !== column) {
-      return (
-        <svg className="w-4 h-4 text-gray-400 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      )
-    }
-    if (sortDirection === 'asc') {
-      return (
-        <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      )
-    }
-    return (
-      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    )
-  }
 
   if (isLoading) {
     return (
@@ -258,31 +259,31 @@ const Members = () => {
                   onClick={() => handleSort('fullName')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Name <SortIcon column="fullName" />
+                  Name <SortIcon column="fullName" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('email')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Email <SortIcon column="email" />
+                  Email <SortIcon column="email" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('membershipCategory')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Category <SortIcon column="membershipCategory" />
+                  Category <SortIcon column="membershipCategory" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('status')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Status <SortIcon column="status" />
+                  Status <SortIcon column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th
                   onClick={() => handleSort('accountBalance')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Balance <SortIcon column="accountBalance" />
+                  Balance <SortIcon column="accountBalance" sortColumn={sortColumn} sortDirection={sortDirection} />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions

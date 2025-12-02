@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { clearAllData, getDataStats, exportAllData, downloadJSONBackup } from '../services/adminService'
 import { importMembersFromCSV } from '../services/membersService'
+import { getMembersWithOutstandingBalance, generateBulkPaymentReminders } from '../services/welcomeLetterService'
 import CategoryManager from '../components/CategoryManager'
 import FeeApplication from '../components/FeeApplication'
 
@@ -22,6 +23,14 @@ const Admin = () => {
 
   // Backup export state
   const [isExporting, setIsExporting] = useState(false)
+
+  // Bulk PDF state
+  const [outstandingMembers, setOutstandingMembers] = useState([])
+  const [isLoadingOutstanding, setIsLoadingOutstanding] = useState(false)
+  const [isGeneratingPDFs, setIsGeneratingPDFs] = useState(false)
+  const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0, memberName: '' })
+  const [pdfResults, setPdfResults] = useState(null)
+  const [showPdfResults, setShowPdfResults] = useState(false)
 
   const { checkPermission, ROLES, currentUser } = useAuth()
   const navigate = useNavigate()
@@ -182,6 +191,52 @@ const Admin = () => {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  // Load members with outstanding balances
+  const loadOutstandingMembers = async () => {
+    try {
+      setIsLoadingOutstanding(true)
+      const members = await getMembersWithOutstandingBalance()
+      setOutstandingMembers(members)
+    } catch (err) {
+      console.error('Error loading outstanding members:', err)
+      setError('Failed to load members with outstanding balances')
+    } finally {
+      setIsLoadingOutstanding(false)
+    }
+  }
+
+  // Generate bulk payment reminder PDFs
+  const handleGenerateBulkPDFs = async () => {
+    try {
+      setIsGeneratingPDFs(true)
+      setError(null)
+      setSuccess(null)
+      setPdfResults(null)
+
+      const results = await generateBulkPaymentReminders((progress) => {
+        setPdfProgress(progress)
+      })
+
+      setPdfResults(results)
+      setShowPdfResults(true)
+
+      if (results.successful > 0) {
+        setSuccess(`Generated ${results.successful} payment reminder PDF(s) successfully`)
+      }
+    } catch (err) {
+      console.error('Error generating bulk PDFs:', err)
+      setError('Failed to generate payment reminder PDFs: ' + err.message)
+    } finally {
+      setIsGeneratingPDFs(false)
+      setPdfProgress({ current: 0, total: 0, memberName: '' })
+    }
+  }
+
+  const closePdfResults = () => {
+    setShowPdfResults(false)
+    setPdfResults(null)
   }
 
   if (!checkPermission(ROLES.SUPER_ADMIN)) {
@@ -373,6 +428,101 @@ const Admin = () => {
         <FeeApplication />
       </div>
 
+      {/* Bulk Payment Reminder PDFs */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Bulk Payment Reminder Letters
+        </h2>
+
+        <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-2">Generate Payment Reminders</h3>
+          <p className="text-sm text-gray-700 mb-3">
+            Generate payment reminder PDF letters for all members with outstanding balances. Each letter will be downloaded individually.
+          </p>
+
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              onClick={loadOutstandingMembers}
+              disabled={isLoadingOutstanding}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
+            >
+              {isLoadingOutstanding ? 'Loading...' : 'Preview Members'}
+            </button>
+
+            <button
+              onClick={handleGenerateBulkPDFs}
+              disabled={isGeneratingPDFs || outstandingMembers.length === 0}
+              className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {isGeneratingPDFs
+                ? `Generating ${pdfProgress.current}/${pdfProgress.total}...`
+                : `Generate All PDFs${outstandingMembers.length > 0 ? ` (${outstandingMembers.length})` : ''}`
+              }
+            </button>
+          </div>
+
+          {/* Progress indicator */}
+          {isGeneratingPDFs && (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Generating: {pdfProgress.memberName}</span>
+                <span>{pdfProgress.current} of {pdfProgress.total}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-ocean-teal h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(pdfProgress.current / pdfProgress.total) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Outstanding members preview */}
+          {outstandingMembers.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-semibold text-gray-900 mb-2">
+                Members with Outstanding Balances ({outstandingMembers.length})
+              </h4>
+              <p className="text-sm text-gray-600 mb-2">
+                Total Outstanding: ${outstandingMembers.reduce((sum, m) => sum + Math.abs(m.accountBalance), 0).toFixed(2)}
+              </p>
+              <div className="max-h-48 overflow-y-auto border rounded">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount Owing</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {outstandingMembers.map(member => (
+                      <tr key={member.id}>
+                        <td className="px-4 py-2 text-sm text-gray-900">{member.fullName}</td>
+                        <td className="px-4 py-2 text-sm text-red-600 text-right font-medium">
+                          ${Math.abs(member.accountBalance).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {outstandingMembers.length === 0 && !isLoadingOutstanding && (
+            <p className="text-sm text-gray-500 italic">
+              Click &quot;Preview Members&quot; to see which members have outstanding balances.
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Danger Zone */}
       <div className="bg-white shadow rounded-lg p-6 border-2 border-red-200">
         <h2 className="text-xl font-semibold text-red-600 mb-4 flex items-center">
@@ -556,6 +706,91 @@ const Admin = () => {
             <div className="p-6 border-t">
               <button
                 onClick={closeUploadResults}
+                className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Generation Results Modal */}
+      {showPdfResults && pdfResults && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">PDF Generation Results</h3>
+                <button
+                  onClick={closePdfResults}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm text-gray-600">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{pdfResults.total}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded">
+                  <p className="text-sm text-gray-600">Successful</p>
+                  <p className="text-2xl font-bold text-green-600">{pdfResults.successful}</p>
+                </div>
+                <div className="bg-red-50 p-4 rounded">
+                  <p className="text-sm text-gray-600">Failed</p>
+                  <p className="text-2xl font-bold text-red-600">{pdfResults.failed}</p>
+                </div>
+              </div>
+
+              {/* Detailed Results */}
+              {pdfResults.details.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3">Generated Letters</h4>
+                  <div className="max-h-64 overflow-y-auto border rounded">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {pdfResults.details.map((detail, index) => (
+                          <tr key={index} className={detail.status === 'success' ? 'bg-green-50' : 'bg-red-50'}>
+                            <td className="px-4 py-2 text-sm text-gray-900">{detail.memberName}</td>
+                            <td className="px-4 py-2 text-sm text-red-600 text-right font-medium">
+                              ${detail.amountOwing.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                detail.status === 'success'
+                                  ? 'bg-green-200 text-green-800'
+                                  : 'bg-red-200 text-red-800'
+                              }`}>
+                                {detail.status === 'success' ? 'Downloaded' : 'Failed'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t">
+              <button
+                onClick={closePdfResults}
                 className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
               >
                 Close

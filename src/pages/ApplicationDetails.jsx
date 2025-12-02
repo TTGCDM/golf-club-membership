@@ -21,16 +21,6 @@ const ApplicationDetails = () => {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
-  // Check permission
-  if (!checkPermission(ROLES.EDIT)) {
-    return (
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
-        <p className="text-gray-600">You do not have permission to view applications.</p>
-      </div>
-    )
-  }
-
   // Fetch application
   const { data: application, isLoading } = useQuery({
     queryKey: ['applications', id],
@@ -73,6 +63,16 @@ const ApplicationDetails = () => {
     }
   })
 
+  // Check permission
+  if (!checkPermission(ROLES.EDIT)) {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
+        <p className="text-gray-600">You do not have permission to view applications.</p>
+      </div>
+    )
+  }
+
   const handleGeneratePDF = () => {
     try {
       generateApplicationPDF(application)
@@ -96,12 +96,6 @@ const ApplicationDetails = () => {
     }
     setError('')
     rejectMutation.mutate()
-  }
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A'
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-    return date.toLocaleDateString()
   }
 
   const formatDateTime = (timestamp) => {

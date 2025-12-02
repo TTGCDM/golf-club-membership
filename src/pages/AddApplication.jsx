@@ -9,17 +9,6 @@ const AddApplication = () => {
   const { checkPermission, ROLES } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-
-  // Check permission - only EDIT or higher
-  if (!checkPermission(ROLES.EDIT)) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
-        <p className="text-gray-600">You do not have permission to add applications.</p>
-      </div>
-    )
-  }
-
   const [formData, setFormData] = useState({
     title: 'Mr',
     fullName: '',
@@ -41,6 +30,16 @@ const AddApplication = () => {
     lastHandicap: '',
     membershipType: 'Full'
   })
+
+  // Check permission - only EDIT or higher
+  if (!checkPermission(ROLES.EDIT)) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Denied</h1>
+        <p className="text-gray-600">You do not have permission to add applications.</p>
+      </div>
+    )
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
