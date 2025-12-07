@@ -1,18 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { clearAllData, getDataStats, exportAllData, downloadJSONBackup } from '../services/adminService'
 import { importMembersFromCSV } from '../services/membersService'
 import { getMembersWithOutstandingBalance, generateBulkPaymentReminders } from '../services/welcomeLetterService'
+import { handleError, showSuccess } from '@/utils/errorHandler'
 import CategoryManager from '../components/CategoryManager'
 import FeeApplication from '../components/FeeApplication'
 
 const Admin = () => {
-  const [dataStats, setDataStats] = useState({ members: 0, payments: 0, users: 0 })
-  const [isLoading, setIsLoading] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
@@ -25,8 +23,6 @@ const Admin = () => {
   const [isExporting, setIsExporting] = useState(false)
 
   // Bulk PDF state
-  const [outstandingMembers, setOutstandingMembers] = useState([])
-  const [isLoadingOutstanding, setIsLoadingOutstanding] = useState(false)
   const [isGeneratingPDFs, setIsGeneratingPDFs] = useState(false)
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0, memberName: '' })
   const [pdfResults, setPdfResults] = useState(null)
@@ -34,43 +30,39 @@ const Admin = () => {
 
   const { checkPermission, ROLES, currentUser } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // React Query for data stats
+  const { data: dataStats = { members: 0, payments: 0, users: 0 }, isLoading, refetch: refetchStats } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: getDataStats,
+    staleTime: 2 * 60 * 1000,
+    enabled: checkPermission(ROLES.SUPER_ADMIN),
+  })
+
+  // React Query for outstanding members (for bulk PDF)
+  const { data: outstandingMembers = [], isLoading: isLoadingOutstanding, refetch: refetchOutstanding } = useQuery({
+    queryKey: ['members', 'outstanding', 'bulk'],
+    queryFn: getMembersWithOutstandingBalance,
+    staleTime: 5 * 60 * 1000,
+    enabled: false, // Only fetch when user clicks
+  })
 
   // Check if user is super admin
-  useEffect(() => {
-    if (!checkPermission(ROLES.SUPER_ADMIN)) {
-      navigate('/dashboard')
-    }
-  }, [checkPermission, ROLES.SUPER_ADMIN, navigate])
-
-  // Load data statistics
-  useEffect(() => {
-    loadStats()
-  }, [])
-
-  const loadStats = async () => {
-    try {
-      setIsLoading(true)
-      const stats = await getDataStats()
-      setDataStats(stats)
-    } catch (err) {
-      console.error('Error loading stats:', err)
-      setError('Failed to load data statistics')
-    } finally {
-      setIsLoading(false)
-    }
+  if (!checkPermission(ROLES.SUPER_ADMIN)) {
+    navigate('/dashboard')
+    return null
   }
 
   const handleClearAllData = async () => {
     // Verify confirmation text
     if (confirmText !== 'DELETE ALL DATA') {
-      setError('Please type "DELETE ALL DATA" to confirm')
+      handleError(new Error('Please type "DELETE ALL DATA" to confirm'))
       return
     }
 
     try {
       setIsClearing(true)
-      setError(null)
-      setSuccess(null)
 
       // Clear all data but preserve current super admin user
       const results = await clearAllData([currentUser.uid])
@@ -79,18 +71,17 @@ const Admin = () => {
       setConfirmText('')
 
       if (results.errors.length > 0) {
-        setError(`Partial success. Errors: ${results.errors.join(', ')}`)
+        handleError(new Error(`Partial success. Errors: ${results.errors.join(', ')}`))
       } else {
-        setSuccess(
+        showSuccess(
           `Successfully cleared all data: ${results.members} members, ${results.payments} payments, ${results.users} users (your account was preserved)`
         )
       }
 
       // Reload stats
-      await loadStats()
+      refetchStats()
     } catch (err) {
-      console.error('Error clearing data:', err)
-      setError('Failed to clear data: ' + err.message)
+      handleError(err, 'Failed to clear data')
     } finally {
       setIsClearing(false)
     }
@@ -99,13 +90,11 @@ const Admin = () => {
   const openConfirmDialog = () => {
     setShowConfirmDialog(true)
     setConfirmText('')
-    setError(null)
   }
 
   const closeConfirmDialog = () => {
     setShowConfirmDialog(false)
     setConfirmText('')
-    setError(null)
   }
 
   const handleCSVUpload = async (event) => {
@@ -114,14 +103,12 @@ const Admin = () => {
 
     // Validate file type
     if (!file.name.endsWith('.csv')) {
-      setError('Please upload a CSV file')
+      handleError(new Error('Please upload a CSV file'))
       return
     }
 
     try {
       setIsUploading(true)
-      setError(null)
-      setSuccess(null)
       setUploadResults(null)
 
       // Read file content
@@ -135,17 +122,17 @@ const Admin = () => {
           setShowUploadResults(true)
 
           if (results.successful > 0) {
-            setSuccess(
+            showSuccess(
               `Upload complete! ${results.successful} member(s) created, ${results.skipped} skipped, ${results.failed} failed`
             )
-            // Reload stats
-            await loadStats()
+            // Reload stats and invalidate members
+            refetchStats()
+            queryClient.invalidateQueries({ queryKey: ['members'] })
           } else {
-            setError('No members were created. Check the upload results for details.')
+            handleError(new Error('No members were created. Check the upload results for details.'))
           }
         } catch (err) {
-          console.error('Error processing CSV:', err)
-          setError('Failed to process CSV: ' + err.message)
+          handleError(err, 'Failed to process CSV')
         } finally {
           setIsUploading(false)
           // Reset file input
@@ -154,14 +141,13 @@ const Admin = () => {
       }
 
       reader.onerror = () => {
-        setError('Failed to read file')
+        handleError(new Error('Failed to read file'))
         setIsUploading(false)
       }
 
       reader.readAsText(file)
     } catch (err) {
-      console.error('Error uploading CSV:', err)
-      setError('Failed to upload CSV: ' + err.message)
+      handleError(err, 'Failed to upload CSV')
       setIsUploading(false)
     }
   }
@@ -174,8 +160,6 @@ const Admin = () => {
   const handleExportData = async () => {
     try {
       setIsExporting(true)
-      setError(null)
-      setSuccess(null)
 
       // Export all data
       const data = await exportAllData()
@@ -184,35 +168,23 @@ const Admin = () => {
       const filename = `teatree-backup-${new Date().toISOString().split('T')[0]}.json`
       downloadJSONBackup(data, filename)
 
-      setSuccess(`Backup downloaded successfully! (${data.counts.members} members, ${data.counts.payments} payments, ${data.counts.users} users)`)
+      showSuccess(`Backup downloaded successfully! (${data.counts.members} members, ${data.counts.payments} payments, ${data.counts.users} users)`)
     } catch (err) {
-      console.error('Error exporting data:', err)
-      setError('Failed to export data: ' + err.message)
+      handleError(err, 'Failed to export data')
     } finally {
       setIsExporting(false)
     }
   }
 
   // Load members with outstanding balances
-  const loadOutstandingMembers = async () => {
-    try {
-      setIsLoadingOutstanding(true)
-      const members = await getMembersWithOutstandingBalance()
-      setOutstandingMembers(members)
-    } catch (err) {
-      console.error('Error loading outstanding members:', err)
-      setError('Failed to load members with outstanding balances')
-    } finally {
-      setIsLoadingOutstanding(false)
-    }
+  const loadOutstandingMembers = () => {
+    refetchOutstanding()
   }
 
   // Generate bulk payment reminder PDFs
   const handleGenerateBulkPDFs = async () => {
     try {
       setIsGeneratingPDFs(true)
-      setError(null)
-      setSuccess(null)
       setPdfResults(null)
 
       const results = await generateBulkPaymentReminders((progress) => {
@@ -223,11 +195,10 @@ const Admin = () => {
       setShowPdfResults(true)
 
       if (results.successful > 0) {
-        setSuccess(`Generated ${results.successful} payment reminder PDF(s) successfully`)
+        showSuccess(`Generated ${results.successful} payment reminder PDF(s) successfully`)
       }
     } catch (err) {
-      console.error('Error generating bulk PDFs:', err)
-      setError('Failed to generate payment reminder PDFs: ' + err.message)
+      handleError(err, 'Failed to generate payment reminder PDFs')
     } finally {
       setIsGeneratingPDFs(false)
       setPdfProgress({ current: 0, total: 0, memberName: '' })
@@ -237,10 +208,6 @@ const Admin = () => {
   const closePdfResults = () => {
     setShowPdfResults(false)
     setPdfResults(null)
-  }
-
-  if (!checkPermission(ROLES.SUPER_ADMIN)) {
-    return null
   }
 
   return (
@@ -276,7 +243,7 @@ const Admin = () => {
         )}
 
         <button
-          onClick={loadStats}
+          onClick={() => refetchStats()}
           className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
         >
           Refresh Statistics
@@ -331,19 +298,6 @@ const Admin = () => {
             <li><strong>Before deployment:</strong> Always create a backup before deploying to production</li>
           </ul>
         </div>
-
-        {/* Success/Error Messages */}
-        {success && (
-          <div className="mt-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded">
-            {success}
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
       </div>
 
       {/* CSV Upload Section */}
@@ -405,19 +359,6 @@ const Admin = () => {
             )}
           </div>
         </div>
-
-        {/* Success/Error Messages */}
-        {success && (
-          <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
-            {success}
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
       </div>
 
       {/* Category Management */}
@@ -550,20 +491,6 @@ const Admin = () => {
             Clear All Data
           </button>
         </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
-            {success}
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
       </div>
 
       {/* Confirmation Dialog */}

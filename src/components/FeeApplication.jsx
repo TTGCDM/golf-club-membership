@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../contexts/AuthContext'
 import { getAllCategories } from '../services/categoryService'
 import { previewFeeApplication, applyAnnualFees } from '../services/feeService'
+import { feeApplicationFormSchema, transformFeeApplicationFormData } from '../schemas'
+import { FormField, FormSelect } from './form'
 
 const FeeApplication = () => {
   const { currentUser } = useAuth()
   const [categories, setCategories] = useState([])
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [categoryFees, setCategoryFees] = useState({}) // Override fees
   const [preview, setPreview] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -15,31 +17,45 @@ const FeeApplication = () => {
   const [showResults, setShowResults] = useState(false)
   const [results, setResults] = useState(null)
 
-  useEffect(() => {
-    loadCategories()
-  }, [])
+  const {
+    register,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(feeApplicationFormSchema),
+    defaultValues: {
+      feeYear: String(new Date().getFullYear()),
+      categoryOverrides: {},
+    },
+  })
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const cats = await getAllCategories()
       setCategories(cats)
 
       // Initialize category fees with default values
-      const defaultFees = {}
+      const defaultOverrides = {}
       cats.forEach(cat => {
-        defaultFees[cat.id] = cat.annualFee
+        defaultOverrides[cat.id] = String(cat.annualFee)
       })
-      setCategoryFees(defaultFees)
+      setValue('categoryOverrides', defaultOverrides)
     } catch (err) {
       setError('Failed to load categories: ' + err.message)
     }
-  }
+  }, [setValue])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
 
   const handleFeeChange = (categoryId, value) => {
-    setCategoryFees(prev => ({
-      ...prev,
-      [categoryId]: parseFloat(value) || 0
-    }))
+    const currentOverrides = getValues('categoryOverrides') || {}
+    setValue('categoryOverrides', {
+      ...currentOverrides,
+      [categoryId]: value
+    })
   }
 
   const handlePreview = async () => {
@@ -47,7 +63,17 @@ const FeeApplication = () => {
       setIsLoading(true)
       setError(null)
       setSuccess(null)
-      const previewData = await previewFeeApplication(selectedYear, categoryFees)
+
+      const formData = getValues()
+      const { feeYear, categoryOverrides } = transformFeeApplicationFormData(formData)
+
+      // Convert overrides to number format for service
+      const categoryFees = {}
+      categories.forEach(cat => {
+        categoryFees[cat.id] = categoryOverrides[cat.id] ?? cat.annualFee
+      })
+
+      const previewData = await previewFeeApplication(feeYear, categoryFees)
       setPreview(previewData)
     } catch (err) {
       setError('Failed to preview: ' + err.message)
@@ -67,8 +93,17 @@ const FeeApplication = () => {
       return
     }
 
+    const formData = getValues()
+    const { feeYear, categoryOverrides } = transformFeeApplicationFormData(formData)
+
+    // Convert overrides to number format for service
+    const categoryFees = {}
+    categories.forEach(cat => {
+      categoryFees[cat.id] = categoryOverrides[cat.id] ?? cat.annualFee
+    })
+
     const confirmed = window.confirm(
-      `Are you sure you want to apply ${selectedYear} annual fees to ${preview.totalMembers} members?\n\n` +
+      `Are you sure you want to apply ${feeYear} annual fees to ${preview.totalMembers} members?\n\n` +
       `Total fees: $${preview.totalAmount.toFixed(2)}\n\n` +
       `This will:\n` +
       `- Deduct fees from member account balances\n` +
@@ -84,7 +119,7 @@ const FeeApplication = () => {
       setError(null)
       setSuccess(null)
 
-      const applyResults = await applyAnnualFees(selectedYear, categoryFees, currentUser.uid)
+      const applyResults = await applyAnnualFees(feeYear, categoryFees, currentUser.uid)
       setResults(applyResults)
       setShowResults(true)
       setPreview(null) // Clear preview after application
@@ -100,11 +135,11 @@ const FeeApplication = () => {
   }
 
   const resetToDefaults = () => {
-    const defaultFees = {}
+    const defaultOverrides = {}
     categories.forEach(cat => {
-      defaultFees[cat.id] = cat.annualFee
+      defaultOverrides[cat.id] = String(cat.annualFee)
     })
-    setCategoryFees(defaultFees)
+    setValue('categoryOverrides', defaultOverrides)
     setPreview(null)
   }
 
@@ -131,23 +166,25 @@ const FeeApplication = () => {
 
       {/* Year Selector */}
       <div className="flex items-center gap-4">
-        <label htmlFor="feeYear" className="text-sm font-medium text-gray-700">
-          Fee Year:
-        </label>
-        <select
-          id="feeYear"
-          value={selectedYear}
-          onChange={(e) => {
-            setSelectedYear(parseInt(e.target.value))
-            setPreview(null) // Clear preview when year changes
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+        <FormField
+          label="Fee Year:"
+          name="feeYear"
+          error={errors.feeYear?.message}
         >
-          {[2024, 2025, 2026, 2027].map(year => (
-            <option key={year} value={year}>{year}</option>
-          ))}
-        </select>
+          <FormSelect
+            id="feeYear"
+            error={errors.feeYear?.message}
+            {...register('feeYear', {
+              onChange: () => setPreview(null) // Clear preview when year changes
+            })}
+          >
+            {[2024, 2025, 2026, 2027].map(year => (
+              <option key={year} value={String(year)}>{year}</option>
+            ))}
+          </FormSelect>
+        </FormField>
         <button
+          type="button"
           onClick={resetToDefaults}
           className="text-sm text-ocean-teal hover:text-ocean-navy"
         >
@@ -181,7 +218,7 @@ const FeeApplication = () => {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={categoryFees[cat.id] || 0}
+                    {...register(`categoryOverrides.${cat.id}`)}
                     onChange={(e) => handleFeeChange(cat.id, e.target.value)}
                     className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                   />

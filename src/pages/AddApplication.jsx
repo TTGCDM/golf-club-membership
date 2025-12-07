@@ -1,34 +1,46 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../contexts/AuthContext'
 import { submitApplication, APPLICATION_STATUS } from '../services/applicationsService'
 import { generateVerificationToken, generateTokenExpiry } from '../services/emailVerificationService'
+import { adminApplicationFormSchema } from '../schemas'
+import { FormField, FormInput, FormSelect } from '../components/form'
 
 const AddApplication = () => {
   const navigate = useNavigate()
   const { checkPermission, ROLES } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-  const [formData, setFormData] = useState({
-    title: 'Mr',
-    fullName: '',
-    streetAddress: '',
-    suburb: '',
-    state: 'TAS',
-    postcode: '',
-    email: '',
-    phoneHome: '',
-    phoneWork: '',
-    phoneMobile: '',
-    dateOfBirth: '',
-    occupation: '',
-    businessName: '',
-    businessAddress: '',
-    businessPostcode: '',
-    previousClubs: '',
-    golfLinkNumber: '',
-    lastHandicap: '',
-    membershipType: 'Full'
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(adminApplicationFormSchema),
+    defaultValues: {
+      title: 'Mr',
+      fullName: '',
+      streetAddress: '',
+      suburb: '',
+      state: 'TAS',
+      postcode: '',
+      email: '',
+      phoneHome: '',
+      phoneWork: '',
+      phoneMobile: '',
+      dateOfBirth: '',
+      occupation: '',
+      businessName: '',
+      businessAddress: '',
+      businessPostcode: '',
+      previousClubs: '',
+      golfLinkNumber: '',
+      lastHandicap: '',
+      membershipType: 'Full'
+    }
   })
 
   // Check permission - only EDIT or higher
@@ -41,16 +53,7 @@ const AddApplication = () => {
     )
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onFormSubmit = async (data) => {
     setSubmitError(null)
     setIsSubmitting(true)
 
@@ -61,7 +64,7 @@ const AddApplication = () => {
 
       // Prepare application data - bypass email verification
       const applicationData = {
-        ...formData,
+        ...data,
         captchaScore: 1.0, // Admin entry, no captcha needed
         submittedFromIp: 'admin-entry',
         userAgent: 'Admin Manual Entry'
@@ -110,82 +113,84 @@ const AddApplication = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         {/* Personal Details */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Details</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            <FormField
+              label="Title"
+              name="title"
+              required
+              error={errors.title?.message}
+            >
+              <FormSelect
+                id="title"
+                error={errors.title?.message}
+                {...register('title')}
               >
                 <option value="Mr">Mr</option>
                 <option value="Mrs">Mrs</option>
                 <option value="Miss">Miss</option>
                 <option value="Ms">Ms</option>
-              </select>
-            </div>
+              </FormSelect>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Full Name"
+              name="fullName"
+              required
+              error={errors.fullName?.message}
+            >
+              <FormInput
                 type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="fullName"
+                error={errors.fullName?.message}
+                {...register('fullName')}
               />
-            </div>
+            </FormField>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Street Address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <FormField
+                label="Street Address"
                 name="streetAddress"
-                value={formData.streetAddress}
-                onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
+                error={errors.streetAddress?.message}
+              >
+                <FormInput
+                  type="text"
+                  id="streetAddress"
+                  error={errors.streetAddress?.message}
+                  {...register('streetAddress')}
+                />
+              </FormField>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Suburb <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Suburb"
+              name="suburb"
+              required
+              error={errors.suburb?.message}
+            >
+              <FormInput
                 type="text"
-                name="suburb"
-                value={formData.suburb}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="suburb"
+                error={errors.suburb?.message}
+                {...register('suburb')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                State <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            <FormField
+              label="State"
+              name="state"
+              required
+              error={errors.state?.message}
+            >
+              <FormSelect
+                id="state"
+                error={errors.state?.message}
+                {...register('state')}
               >
                 <option value="TAS">TAS</option>
                 <option value="NSW">NSW</option>
@@ -195,109 +200,108 @@ const AddApplication = () => {
                 <option value="WA">WA</option>
                 <option value="NT">NT</option>
                 <option value="ACT">ACT</option>
-              </select>
-            </div>
+              </FormSelect>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Postcode <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Postcode"
+              name="postcode"
+              required
+              error={errors.postcode?.message}
+            >
+              <FormInput
                 type="text"
-                name="postcode"
-                value={formData.postcode}
-                onChange={handleChange}
-                required
+                id="postcode"
                 maxLength="4"
-                pattern="[0-9]{4}"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                error={errors.postcode?.message}
+                {...register('postcode')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Email"
+              name="email"
+              required
+              error={errors.email?.message}
+            >
+              <FormInput
                 type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="email"
+                error={errors.email?.message}
+                {...register('email')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone (Home)
-              </label>
-              <input
+            <FormField
+              label="Phone (Home)"
+              name="phoneHome"
+              error={errors.phoneHome?.message}
+            >
+              <FormInput
                 type="tel"
-                name="phoneHome"
-                value={formData.phoneHome}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="phoneHome"
+                error={errors.phoneHome?.message}
+                {...register('phoneHome')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone (Work)
-              </label>
-              <input
+            <FormField
+              label="Phone (Work)"
+              name="phoneWork"
+              error={errors.phoneWork?.message}
+            >
+              <FormInput
                 type="tel"
-                name="phoneWork"
-                value={formData.phoneWork}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="phoneWork"
+                error={errors.phoneWork?.message}
+                {...register('phoneWork')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone (Mobile) <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Phone (Mobile)"
+              name="phoneMobile"
+              required
+              error={errors.phoneMobile?.message}
+            >
+              <FormInput
                 type="tel"
-                name="phoneMobile"
-                value={formData.phoneMobile}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="phoneMobile"
+                error={errors.phoneMobile?.message}
+                {...register('phoneMobile')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date of Birth <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              label="Date of Birth"
+              name="dateOfBirth"
+              required
+              error={errors.dateOfBirth?.message}
+            >
+              <FormInput
                 type="date"
-                name="dateOfBirth"
-                value={formData.dateOfBirth}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="dateOfBirth"
+                error={errors.dateOfBirth?.message}
+                {...register('dateOfBirth')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Membership Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="membershipType"
-                value={formData.membershipType}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            <FormField
+              label="Membership Type"
+              name="membershipType"
+              required
+              error={errors.membershipType?.message}
+            >
+              <FormSelect
+                id="membershipType"
+                error={errors.membershipType?.message}
+                {...register('membershipType')}
               >
                 <option value="Full">Full</option>
                 <option value="Restricted">Restricted</option>
                 <option value="Junior">Junior</option>
-              </select>
-            </div>
+              </FormSelect>
+            </FormField>
           </div>
         </div>
 
@@ -306,56 +310,55 @@ const AddApplication = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information (Optional)</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Occupation
-              </label>
-              <input
+            <FormField
+              label="Occupation"
+              name="occupation"
+            >
+              <FormInput
                 type="text"
-                name="occupation"
-                value={formData.occupation}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="occupation"
+                {...register('occupation')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Golf Link Number
-              </label>
-              <input
+            <FormField
+              label="Golf Link Number"
+              name="golfLinkNumber"
+              error={errors.golfLinkNumber?.message}
+            >
+              <FormInput
                 type="text"
-                name="golfLinkNumber"
-                value={formData.golfLinkNumber}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="golfLinkNumber"
+                error={errors.golfLinkNumber?.message}
+                {...register('golfLinkNumber')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Handicap
-              </label>
-              <input
+            <FormField
+              label="Last Handicap"
+              name="lastHandicap"
+              error={errors.lastHandicap?.message}
+            >
+              <FormInput
                 type="text"
-                name="lastHandicap"
-                value={formData.lastHandicap}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                id="lastHandicap"
+                error={errors.lastHandicap?.message}
+                {...register('lastHandicap')}
               />
-            </div>
+            </FormField>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Previous Clubs
-              </label>
-              <textarea
+              <FormField
+                label="Previous Clubs"
                 name="previousClubs"
-                value={formData.previousClubs}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
+              >
+                <textarea
+                  id="previousClubs"
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1"
+                  {...register('previousClubs')}
+                />
+              </FormField>
             </div>
           </div>
         </div>

@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {}
+    },
+    "newrelic": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@piekstras/newrelic-mcp-server"
+      ],
+      "env": {
+        "NEWRELIC_API_KEY": "NRAK-YOUR-API-KEY-HERE",
+        "NEWRELIC_ACCOUNT_ID": "YOUR-ACCOUNT-ID",
+        "NEWRELIC_REGION": "US"
+      }
+    }
+  }
+}

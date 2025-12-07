@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   getAllCategories,
   createCategory,
@@ -7,6 +9,8 @@ import {
   reorderCategories,
   seedDefaultCategories
 } from '../services/categoryService'
+import { categoryFormSchema } from '../schemas'
+import { FormField, FormInput } from './form'
 
 const CategoryManager = () => {
   const [categories, setCategories] = useState([])
@@ -15,15 +19,24 @@ const CategoryManager = () => {
   const [success, setSuccess] = useState(null)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    ageMin: 0,
-    ageMax: 999,
-    playingRights: '7 days',
-    annualFee: 0,
-    joiningFee: 0,
-    isSpecial: false,
-    joiningFeeMonths: []
+  const [joiningFeeMonths, setJoiningFeeMonths] = useState([])
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: {
+      name: '',
+      ageMin: '0',
+      ageMax: '999',
+      playingRights: '7 days',
+      annualFee: '0',
+      joiningFee: '0',
+      isSpecial: false,
+    }
   })
 
   useEffect(() => {
@@ -62,16 +75,16 @@ const CategoryManager = () => {
 
   const openAddForm = () => {
     setEditingCategory(null)
-    setFormData({
+    reset({
       name: '',
-      ageMin: 0,
-      ageMax: 999,
+      ageMin: '0',
+      ageMax: '999',
       playingRights: '7 days',
-      annualFee: 0,
-      joiningFee: 0,
+      annualFee: '0',
+      joiningFee: '0',
       isSpecial: false,
-      joiningFeeMonths: []
     })
+    setJoiningFeeMonths([])
     setShowCategoryForm(true)
     setError(null)
     setSuccess(null)
@@ -79,16 +92,16 @@ const CategoryManager = () => {
 
   const openEditForm = (category) => {
     setEditingCategory(category)
-    setFormData({
+    reset({
       name: category.name,
-      ageMin: category.ageMin,
-      ageMax: category.ageMax,
+      ageMin: String(category.ageMin),
+      ageMax: String(category.ageMax),
       playingRights: category.playingRights,
-      annualFee: category.annualFee,
-      joiningFee: category.joiningFee,
+      annualFee: String(category.annualFee),
+      joiningFee: String(category.joiningFee),
       isSpecial: category.isSpecial,
-      joiningFeeMonths: category.joiningFeeMonths || []
     })
+    setJoiningFeeMonths(category.joiningFeeMonths || [])
     setShowCategoryForm(true)
     setError(null)
     setSuccess(null)
@@ -100,24 +113,33 @@ const CategoryManager = () => {
     setError(null)
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
+  const onFormSubmit = async (data) => {
     try {
       setError(null)
       setSuccess(null)
 
+      const categoryData = {
+        name: data.name,
+        ageMin: parseInt(data.ageMin, 10),
+        ageMax: parseInt(data.ageMax, 10),
+        playingRights: data.playingRights,
+        annualFee: parseFloat(data.annualFee),
+        joiningFee: parseFloat(data.joiningFee),
+        isSpecial: data.isSpecial,
+        joiningFeeMonths: joiningFeeMonths,
+      }
+
       if (editingCategory) {
         // Update existing category
         await updateCategory(editingCategory.id, {
-          ...formData,
+          ...categoryData,
           order: editingCategory.order
         })
         setSuccess('Category updated successfully')
       } else {
         // Create new category
         const order = categories.length + 1
-        await createCategory({ ...formData, order })
+        await createCategory({ ...categoryData, order })
         setSuccess('Category created successfully')
       }
 
@@ -181,11 +203,10 @@ const CategoryManager = () => {
   }
 
   const toggleJoiningFeeMonth = (month) => {
-    const months = formData.joiningFeeMonths || []
-    if (months.includes(month)) {
-      setFormData({ ...formData, joiningFeeMonths: months.filter(m => m !== month) })
+    if (joiningFeeMonths.includes(month)) {
+      setJoiningFeeMonths(joiningFeeMonths.filter(m => m !== month))
     } else {
-      setFormData({ ...formData, joiningFeeMonths: [...months, month].sort((a, b) => a - b) })
+      setJoiningFeeMonths([...joiningFeeMonths, month].sort((a, b) => a - b))
     }
   }
 
@@ -320,104 +341,113 @@ const CategoryManager = () => {
               </h3>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
+            <form onSubmit={handleSubmit(onFormSubmit)} className="p-6">
               <div className="grid grid-cols-2 gap-4">
                 {/* Name */}
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  <FormField
+                    label="Category Name"
+                    name="name"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                  />
+                    error={errors.name?.message}
+                  >
+                    <FormInput
+                      type="text"
+                      id="name"
+                      error={errors.name?.message}
+                      {...register('name')}
+                    />
+                  </FormField>
                 </div>
 
                 {/* Age Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum Age *
-                  </label>
-                  <input
+                <FormField
+                  label="Minimum Age"
+                  name="ageMin"
+                  required
+                  error={errors.ageMin?.message}
+                >
+                  <FormInput
                     type="number"
-                    value={formData.ageMin}
-                    onChange={(e) => setFormData({ ...formData, ageMin: parseInt(e.target.value) })}
-                    required
+                    id="ageMin"
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    error={errors.ageMin?.message}
+                    {...register('ageMin')}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Maximum Age *
-                  </label>
-                  <input
+                <FormField
+                  label="Maximum Age"
+                  name="ageMax"
+                  required
+                  error={errors.ageMax?.message}
+                >
+                  <FormInput
                     type="number"
-                    value={formData.ageMax}
-                    onChange={(e) => setFormData({ ...formData, ageMax: parseInt(e.target.value) })}
-                    required
+                    id="ageMax"
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    error={errors.ageMax?.message}
+                    {...register('ageMax')}
                   />
-                </div>
+                </FormField>
 
                 {/* Playing Rights */}
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Playing Rights *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.playingRights}
-                    onChange={(e) => setFormData({ ...formData, playingRights: e.target.value })}
+                  <FormField
+                    label="Playing Rights"
+                    name="playingRights"
                     required
-                    placeholder="e.g., 7 days, Weekends only, None"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                  />
+                    error={errors.playingRights?.message}
+                  >
+                    <FormInput
+                      type="text"
+                      id="playingRights"
+                      placeholder="e.g., 7 days, Weekends only, None"
+                      error={errors.playingRights?.message}
+                      {...register('playingRights')}
+                    />
+                  </FormField>
                 </div>
 
                 {/* Fees */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Annual Fee ($) *
-                  </label>
-                  <input
+                <FormField
+                  label="Annual Fee ($)"
+                  name="annualFee"
+                  required
+                  error={errors.annualFee?.message}
+                >
+                  <FormInput
                     type="number"
-                    value={formData.annualFee}
-                    onChange={(e) => setFormData({ ...formData, annualFee: parseFloat(e.target.value) })}
-                    required
+                    id="annualFee"
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    error={errors.annualFee?.message}
+                    {...register('annualFee')}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Joining Fee ($) *
-                  </label>
-                  <input
+                <FormField
+                  label="Joining Fee ($)"
+                  name="joiningFee"
+                  required
+                  error={errors.joiningFee?.message}
+                >
+                  <FormInput
                     type="number"
-                    value={formData.joiningFee}
-                    onChange={(e) => setFormData({ ...formData, joiningFee: parseFloat(e.target.value) })}
-                    required
+                    id="joiningFee"
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    error={errors.joiningFee?.message}
+                    {...register('joiningFee')}
                   />
-                </div>
+                </FormField>
 
                 {/* Special Flag */}
                 <div className="col-span-2">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={formData.isSpecial}
-                      onChange={(e) => setFormData({ ...formData, isSpecial: e.target.checked })}
+                      {...register('isSpecial')}
                       className="mr-2"
                     />
                     <span className="text-sm text-gray-700">
@@ -442,7 +472,7 @@ const CategoryManager = () => {
                         key={month.num}
                         type="button"
                         onClick={() => toggleJoiningFeeMonth(month.num)}
-                        className={`px-2 py-1 text-xs rounded ${(formData.joiningFeeMonths || []).includes(month.num)
+                        className={`px-2 py-1 text-xs rounded ${joiningFeeMonths.includes(month.num)
                             ? 'bg-ocean-teal text-white'
                             : 'bg-gray-100 text-gray-600'
                           }`}

@@ -1,29 +1,70 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { getMemberById } from '../services/membersService'
+import { useMember, memberKeys } from '@/hooks/useMember'
+import { useMemberPayments, useRecordPayment } from '@/hooks/useMemberPayments'
+import { useMemberFees, feeKeys } from '@/hooks/useMemberFees'
+import { useQuery } from '@tanstack/react-query'
 import { getAllCategories, calculateAge } from '../services/membershipCategories'
-import { getPaymentsByMember, formatPaymentMethod, generatePDFReceipt, recordPayment } from '../services/paymentsService'
-import { getFeesByMember, applyFeeToMember } from '../services/feeService'
+import { formatPaymentMethod, generatePDFReceipt } from '../services/paymentsService'
+import { applyFeeToMember } from '../services/feeService'
 import { generateWelcomeLetter, generatePaymentReminder } from '../services/welcomeLetterService'
+import { addMemberComment, deleteMemberComment } from '../services/membersService'
+import { handleError, showSuccess } from '@/utils/errorHandler'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const MemberDetail = () => {
   const { checkPermission, ROLES, currentUser } = useAuth()
-  const [member, setMember] = useState(null)
-  const [payments, setPayments] = useState([])
-  const [fees, setFees] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const [category, setCategory] = useState(null)
+  const { id } = useParams()
+  const queryClient = useQueryClient()
+
+  // React Query hooks
+  const { data: member, isLoading: memberLoading, error: memberError } = useMember(id)
+  const { data: payments = [], isLoading: paymentsLoading } = useMemberPayments(id)
+  const { data: fees = [], isLoading: feesLoading } = useMemberFees(id)
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  })
+
+  // Record payment mutation
+  const recordPaymentMutation = useRecordPayment()
+
+  // Modal states
   const [showFeeModal, setShowFeeModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+
+  // Comment state
+  const [newComment, setNewComment] = useState('')
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+
+  // Fee form state
   const [feeFormData, setFeeFormData] = useState({
     amount: '',
     feeYear: new Date().getFullYear(),
     notes: ''
   })
   const [isSubmittingFee, setIsSubmittingFee] = useState(false)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
+
+  // Payment form state
   const [paymentFormData, setPaymentFormData] = useState({
     amount: '',
     paymentDate: new Date().toISOString().split('T')[0],
@@ -31,50 +72,40 @@ const MemberDetail = () => {
     reference: '',
     notes: ''
   })
-  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
-  const { id } = useParams()
-
 
   const canEdit = checkPermission(ROLES.EDIT)
+
+  // Find member's category
+  const category = categories.find(c => c.id === member?.membershipCategory)
 
   const handlePrintReceipt = async (payment) => {
     try {
       await generatePDFReceipt(payment)
-      setSuccess('Receipt generated successfully!')
-      setTimeout(() => setSuccess(null), 3000)
+      showSuccess('Receipt generated successfully!')
     } catch (err) {
-      console.error('Error generating receipt:', err)
-      setError('Failed to generate receipt')
-      setTimeout(() => setError(null), 3000)
+      handleError(err, 'Failed to generate receipt')
     }
   }
 
   const handleGenerateWelcomeLetter = async () => {
     try {
       await generateWelcomeLetter(id)
-      setSuccess('Welcome letter generated successfully!')
-      setTimeout(() => setSuccess(null), 3000)
+      showSuccess('Welcome letter generated successfully!')
     } catch (err) {
-      console.error('Error generating welcome letter:', err)
-      setError('Failed to generate welcome letter')
-      setTimeout(() => setError(null), 3000)
+      handleError(err, 'Failed to generate welcome letter')
     }
   }
 
   const handleGeneratePaymentReminder = async () => {
     try {
       await generatePaymentReminder(id)
-      setSuccess('Payment reminder generated successfully!')
-      setTimeout(() => setSuccess(null), 3000)
+      showSuccess('Payment reminder generated successfully!')
     } catch (err) {
-      console.error('Error generating payment reminder:', err)
-      setError('Failed to generate payment reminder')
-      setTimeout(() => setError(null), 3000)
+      handleError(err, 'Failed to generate payment reminder')
     }
   }
 
   const handleOpenFeeModal = () => {
-    // Pre-fill with category annual fee if available
     setFeeFormData({
       amount: category?.annualFee || '',
       feeYear: new Date().getFullYear(),
@@ -86,7 +117,6 @@ const MemberDetail = () => {
   const handleRecordFee = async (e) => {
     e.preventDefault()
     setIsSubmittingFee(true)
-    setError(null)
 
     try {
       const feeData = {
@@ -101,28 +131,21 @@ const MemberDetail = () => {
 
       await applyFeeToMember(feeData, currentUser.uid)
 
-      // Refresh data
-      const [updatedMember, updatedFees] = await Promise.all([
-        getMemberById(id),
-        getFeesByMember(id)
-      ])
-      setMember(updatedMember)
-      setFees(updatedFees)
+      // Invalidate queries to refetch
+      queryClient.invalidateQueries({ queryKey: memberKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: feeKeys.byMember(id) })
 
-      setSuccess('Fee recorded successfully!')
+      showSuccess('Fee recorded successfully!')
       setShowFeeModal(false)
       setFeeFormData({ amount: '', feeYear: new Date().getFullYear(), notes: '' })
-      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      console.error('Error recording fee:', err)
-      setError('Failed to record fee')
+      handleError(err, 'Failed to record fee')
     } finally {
       setIsSubmittingFee(false)
     }
   }
 
   const handleOpenPaymentModal = () => {
-    // Pre-fill amount with outstanding balance if member owes money
     const outstandingAmount = member.accountBalance < 0 ? Math.abs(member.accountBalance) : ''
     setPaymentFormData({
       amount: outstandingAmount,
@@ -134,77 +157,71 @@ const MemberDetail = () => {
     setShowPaymentModal(true)
   }
 
-  const handleRecordPayment = async (e) => {
+  const handleAddComment = async (e) => {
     e.preventDefault()
-    setIsSubmittingPayment(true)
-    setError(null)
+    if (!newComment.trim()) return
 
+    setIsSubmittingComment(true)
     try {
-      const paymentData = {
-        memberId: id,
-        memberName: member.fullName,
-        amount: parseFloat(paymentFormData.amount),
-        paymentDate: paymentFormData.paymentDate,
-        paymentMethod: paymentFormData.paymentMethod,
-        reference: paymentFormData.reference,
-        notes: paymentFormData.notes
-      }
-
-      await recordPayment(paymentData, currentUser.uid)
-
-      // Refresh data
-      const [updatedMember, updatedPayments] = await Promise.all([
-        getMemberById(id),
-        getPaymentsByMember(id)
-      ])
-      setMember(updatedMember)
-      setPayments(updatedPayments)
-
-      setSuccess('Payment recorded successfully!')
-      setShowPaymentModal(false)
-      setPaymentFormData({
-        amount: '',
-        paymentDate: new Date().toISOString().split('T')[0],
-        paymentMethod: 'bank_transfer',
-        reference: '',
-        notes: ''
-      })
-      setTimeout(() => setSuccess(null), 3000)
+      await addMemberComment(
+        id,
+        newComment.trim(),
+        currentUser.uid,
+        currentUser.email
+      )
+      queryClient.invalidateQueries({ queryKey: memberKeys.detail(id) })
+      setNewComment('')
+      showSuccess('Comment added successfully!')
     } catch (err) {
-      console.error('Error recording payment:', err)
-      setError('Failed to record payment')
+      handleError(err, 'Failed to add comment')
     } finally {
-      setIsSubmittingPayment(false)
+      setIsSubmittingComment(false)
     }
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [memberData, paymentData, feeData, categories] = await Promise.all([
-          getMemberById(id),
-          getPaymentsByMember(id),
-          getFeesByMember(id),
-          getAllCategories()
-        ])
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return
 
-        setMember(memberData)
-        setPayments(paymentData)
-        setFees(feeData)
+    try {
+      await deleteMemberComment(id, commentId)
+      queryClient.invalidateQueries({ queryKey: memberKeys.detail(id) })
+      showSuccess('Comment deleted successfully!')
+    } catch (err) {
+      handleError(err, 'Failed to delete comment')
+    }
+  }
 
-        // Find the category for this member
-        const memberCategory = categories.find(c => c.id === memberData.membershipCategory)
-        setCategory(memberCategory)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError('Failed to load member data.')
-      } finally {
-        setIsLoading(false)
-      }
+  const handleRecordPayment = async (e) => {
+    e.preventDefault()
+
+    const paymentData = {
+      memberId: id,
+      memberName: member.fullName,
+      amount: parseFloat(paymentFormData.amount),
+      paymentDate: paymentFormData.paymentDate,
+      paymentMethod: paymentFormData.paymentMethod,
+      reference: paymentFormData.reference,
+      notes: paymentFormData.notes
     }
 
-    fetchData()
-  }, [id])
+    recordPaymentMutation.mutate(
+      { paymentData, userId: currentUser.uid },
+      {
+        onSuccess: () => {
+          setShowPaymentModal(false)
+          setPaymentFormData({
+            amount: '',
+            paymentDate: new Date().toISOString().split('T')[0],
+            paymentMethod: 'bank_transfer',
+            reference: '',
+            notes: ''
+          })
+        }
+      }
+    )
+  }
+
+  const isLoading = memberLoading || paymentsLoading || feesLoading
 
   if (isLoading) {
     return (
@@ -215,12 +232,12 @@ const MemberDetail = () => {
     )
   }
 
-  if (error || !member) {
+  if (memberError || !member) {
     return (
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Member Detail</h1>
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-800">{error || 'Member not found'}</p>
+          <p className="text-red-800">{memberError?.message || 'Member not found'}</p>
         </div>
         <Link to="/members" className="text-ocean-teal hover:text-ocean-navy mt-4 inline-block">
           Back to Members
@@ -231,10 +248,9 @@ const MemberDetail = () => {
 
   const age = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
 
-  // Helper function to determine balance color
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-ocean-teal' // Positive = credit
-    if (balance < 0) return 'text-red-600'   // Negative = owes money
+    if (balance > 0) return 'text-ocean-teal'
+    if (balance < 0) return 'text-red-600'
     return 'text-gray-900'
   }
 
@@ -250,45 +266,24 @@ const MemberDetail = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={handleGenerateWelcomeLetter}
-            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
-            title="Generate welcome letter and information pack"
-          >
+          <Button onClick={handleGenerateWelcomeLetter} variant="ocean">
             Welcome Letter
-          </button>
+          </Button>
           {member.accountBalance < 0 && (
-            <button
-              onClick={handleGeneratePaymentReminder}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              title="Generate payment reminder letter"
-            >
+            <Button onClick={handleGeneratePaymentReminder} variant="destructive">
               Payment Reminder
-            </button>
+            </Button>
           )}
           {canEdit && (
-            <Link
-              to={`/members/${id}/edit`}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Edit
-            </Link>
+            <Button variant="outline" asChild>
+              <Link to={`/members/${id}/edit`}>Edit</Link>
+            </Button>
           )}
-          <Link
-            to="/members"
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Back to List
-          </Link>
+          <Button variant="outline" asChild>
+            <Link to="/members">Back to List</Link>
+          </Button>
         </div>
       </div>
-
-      {/* Success Message */}
-      {success && (
-        <div className="mb-4 p-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
-          <p className="text-ocean-teal">{success}</p>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Account Balance Card */}
@@ -308,18 +303,12 @@ const MemberDetail = () => {
               </div>
               {canEdit && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleOpenPaymentModal}
-                    className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
-                  >
+                  <Button onClick={handleOpenPaymentModal} variant="ocean">
                     Record Payment
-                  </button>
-                  <button
-                    onClick={handleOpenFeeModal}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
+                  </Button>
+                  <Button onClick={handleOpenFeeModal} variant="destructive">
                     Record Fee
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -429,7 +418,6 @@ const MemberDetail = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Combine payments and fees, sort by date */}
                     {[
                       ...payments.map(p => ({ ...p, type: 'payment', date: p.paymentDate })),
                       ...fees.map(f => ({ ...f, type: 'fee', date: f.appliedDate }))
@@ -470,13 +458,13 @@ const MemberDetail = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                             {transaction.type === 'payment' && (
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handlePrintReceipt(transaction)}
-                                className="text-ocean-teal hover:text-ocean-navy"
-                                title="Print Receipt"
                               >
                                 Print
-                              </button>
+                              </Button>
                             )}
                           </td>
                         </tr>
@@ -512,209 +500,247 @@ const MemberDetail = () => {
             )}
           </div>
         </div>
+
+        {/* Member Comments Section */}
+        <div className="lg:col-span-3">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Notes & Comments</h3>
+
+            {/* Add Comment Form */}
+            {canEdit && (
+              <form onSubmit={handleAddComment} className="mb-6">
+                <div className="flex gap-2">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a note about this member..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal text-sm resize-none"
+                    rows={2}
+                  />
+                  <Button
+                    type="submit"
+                    variant="ocean"
+                    disabled={isSubmittingComment || !newComment.trim()}
+                    className="self-end"
+                  >
+                    {isSubmittingComment ? 'Adding...' : 'Add Note'}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Comments List */}
+            {(!member.comments || member.comments.length === 0) ? (
+              <p className="text-gray-500 text-sm">No notes recorded yet</p>
+            ) : (
+              <div className="space-y-4">
+                {member.comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="border-l-4 border-ocean-teal pl-4 py-2 bg-gray-50 rounded-r"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-900 whitespace-pre-wrap">{comment.text}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(comment.createdAt).toLocaleString('en-AU', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                          {' — '}
+                          {comment.createdByName}
+                        </p>
+                      </div>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Record Fee Modal */}
-      {showFeeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Record Fee</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Recording fee for: <strong>{member.fullName}</strong>
-            </p>
+      {/* Record Fee Dialog */}
+      <Dialog open={showFeeModal} onOpenChange={setShowFeeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Fee</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mb-4">
+            Recording fee for: <strong>{member.fullName}</strong>
+          </p>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-red-800 text-sm">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleRecordFee}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="feeAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="feeAmount"
-                    step="0.01"
-                    min="0"
-                    value={feeFormData.amount}
-                    onChange={(e) => setFeeFormData({ ...feeFormData, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="feeYear" className="block text-sm font-medium text-gray-700 mb-1">
-                    Fee Year
-                  </label>
-                  <input
-                    type="number"
-                    id="feeYear"
-                    min="2020"
-                    max="2030"
-                    value={feeFormData.feeYear}
-                    onChange={(e) => setFeeFormData({ ...feeFormData, feeYear: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="feeNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <input
-                    type="text"
-                    id="feeNotes"
-                    value={feeFormData.notes}
-                    onChange={(e) => setFeeFormData({ ...feeFormData, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    placeholder="e.g., 2025 Annual Membership Fee"
-                  />
-                </div>
+          <form onSubmit={handleRecordFee}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="feeAmount">Amount ($)</Label>
+                <Input
+                  type="number"
+                  id="feeAmount"
+                  step="0.01"
+                  min="0"
+                  value={feeFormData.amount}
+                  onChange={(e) => setFeeFormData({ ...feeFormData, amount: e.target.value })}
+                  required
+                />
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowFeeModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  disabled={isSubmittingFee}
+              <div>
+                <Label htmlFor="feeYear">Fee Year</Label>
+                <Input
+                  type="number"
+                  id="feeYear"
+                  min="2020"
+                  max="2030"
+                  value={feeFormData.feeYear}
+                  onChange={(e) => setFeeFormData({ ...feeFormData, feeYear: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="feeNotes">Notes</Label>
+                <Input
+                  type="text"
+                  id="feeNotes"
+                  value={feeFormData.notes}
+                  onChange={(e) => setFeeFormData({ ...feeFormData, notes: e.target.value })}
+                  placeholder="e.g., 2025 Annual Membership Fee"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFeeModal(false)}
+                disabled={isSubmittingFee}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={isSubmittingFee}
+              >
+                {isSubmittingFee ? 'Recording...' : 'Record Fee'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mb-4">
+            Recording payment for: <strong>{member.fullName}</strong>
+          </p>
+
+          <form onSubmit={handleRecordPayment}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="paymentAmount">Amount ($)</Label>
+                <Input
+                  type="number"
+                  id="paymentAmount"
+                  step="0.01"
+                  min="0"
+                  value={paymentFormData.amount}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="paymentDate">Payment Date</Label>
+                <Input
+                  type="date"
+                  id="paymentDate"
+                  value={paymentFormData.paymentDate}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select
+                  value={paymentFormData.paymentMethod}
+                  onValueChange={(value) => setPaymentFormData({ ...paymentFormData, paymentMethod: value })}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-                  disabled={isSubmittingFee}
-                >
-                  {isSubmittingFee ? 'Recording...' : 'Record Fee'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Record Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Record Payment</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Recording payment for: <strong>{member.fullName}</strong>
-            </p>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-red-800 text-sm">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleRecordPayment}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="paymentAmount"
-                    step="0.01"
-                    min="0"
-                    value={paymentFormData.amount}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Date
-                  </label>
-                  <input
-                    type="date"
-                    id="paymentDate"
-                    value={paymentFormData.paymentDate}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    id="paymentMethod"
-                    value={paymentFormData.paymentMethod}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    required
-                  >
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="cash">Cash</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="card">Card</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="paymentReference" className="block text-sm font-medium text-gray-700 mb-1">
-                    Reference (optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="paymentReference"
-                    value={paymentFormData.reference}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, reference: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    placeholder="e.g., Transfer ID, Cheque number"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="paymentNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes (optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="paymentNotes"
-                    value={paymentFormData.notes}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-                    placeholder="Any additional notes"
-                  />
-                </div>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  disabled={isSubmittingPayment}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
-                  disabled={isSubmittingPayment}
-                >
-                  {isSubmittingPayment ? 'Recording...' : 'Record Payment'}
-                </button>
+              <div>
+                <Label htmlFor="paymentReference">Reference (optional)</Label>
+                <Input
+                  type="text"
+                  id="paymentReference"
+                  value={paymentFormData.reference}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, reference: e.target.value })}
+                  placeholder="e.g., Transfer ID, Cheque number"
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <div>
+                <Label htmlFor="paymentNotes">Notes (optional)</Label>
+                <Input
+                  type="text"
+                  id="paymentNotes"
+                  value={paymentFormData.notes}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                  placeholder="Any additional notes"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={recordPaymentMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="ocean"
+                disabled={recordPaymentMutation.isPending}
+              >
+                {recordPaymentMutation.isPending ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { determineCategoryByAge } from './membershipCategories'
+import { memberFormSchema, memberCSVRowSchema } from '../schemas'
+import { ValidationError } from '../utils/ValidationError'
 
 const MEMBERS_COLLECTION = 'members'
 
@@ -72,6 +74,12 @@ export const getMemberStats = async () => {
 // Create a new member
 export const createMember = async (memberData) => {
   try {
+    // Validate with Zod schema
+    const validation = memberFormSchema.safeParse(memberData)
+    if (!validation.success) {
+      throw new ValidationError(validation.error.flatten())
+    }
+
     // Provide defaults for optional fields
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
@@ -255,6 +263,65 @@ export const updateMember = async (memberId, memberData) => {
     return { id: memberId, ...updatedData }
   } catch (error) {
     console.error('Error updating member:', error)
+    throw error
+  }
+}
+
+// Add a timestamped comment to a member
+export const addMemberComment = async (memberId, commentText, userId, userName) => {
+  try {
+    const docRef = doc(db, MEMBERS_COLLECTION, memberId)
+    const docSnap = await getDoc(docRef)
+
+    if (!docSnap.exists()) {
+      throw new Error('Member not found')
+    }
+
+    const memberData = docSnap.data()
+    const existingComments = memberData.comments || []
+
+    const newComment = {
+      id: Date.now().toString(),
+      text: commentText,
+      createdAt: new Date().toISOString(),
+      createdBy: userId,
+      createdByName: userName
+    }
+
+    const updatedComments = [newComment, ...existingComments]
+
+    await updateDoc(docRef, {
+      comments: updatedComments,
+      updatedAt: serverTimestamp()
+    })
+
+    return newComment
+  } catch (error) {
+    console.error('Error adding member comment:', error)
+    throw error
+  }
+}
+
+// Delete a member comment
+export const deleteMemberComment = async (memberId, commentId) => {
+  try {
+    const docRef = doc(db, MEMBERS_COLLECTION, memberId)
+    const docSnap = await getDoc(docRef)
+
+    if (!docSnap.exists()) {
+      throw new Error('Member not found')
+    }
+
+    const memberData = docSnap.data()
+    const existingComments = memberData.comments || []
+    const updatedComments = existingComments.filter(c => c.id !== commentId)
+
+    await updateDoc(docRef, {
+      comments: updatedComments,
+      updatedAt: serverTimestamp()
+    })
+  } catch (error) {
+    console.error('Error deleting member comment:', error)
     throw error
   }
 }
@@ -445,37 +512,19 @@ const parseCSV = (csvText) => {
 }
 
 /**
- * Validate member data from CSV
+ * Validate member data from CSV using Zod schema
  * @param {Object} member - Member object to validate
  * @returns {Object} { valid: boolean, error: string }
  */
 const validateMemberData = (member) => {
-  // Full Name is required
-  if (!member.fullName || member.fullName.trim() === '') {
-    return { valid: false, error: 'Full Name is required' }
-  }
+  const result = memberCSVRowSchema.safeParse(member)
 
-  // Golf Australia ID is required
-  if (!member.golfAustraliaId || member.golfAustraliaId.trim() === '') {
-    return { valid: false, error: 'Golf Australia ID is required' }
-  }
-
-  // Validate Date of Birth format (YYYY-MM-DD) if provided
-  if (member.dateOfBirth && member.dateOfBirth.trim() !== '') {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-    if (!dateRegex.test(member.dateOfBirth)) {
-      return { valid: false, error: 'Invalid Date of Birth format (use YYYY-MM-DD)' }
-    }
-  }
-
-  // Validate status if provided
-  if (member.status && member.status.trim() !== '' && !['active', 'inactive'].includes(member.status.toLowerCase())) {
-    return { valid: false, error: 'Invalid Status (must be "active" or "inactive")' }
-  }
-
-  // Validate account balance if provided
-  if (member.accountBalance && isNaN(member.accountBalance)) {
-    return { valid: false, error: 'Invalid Account Balance (must be a number)' }
+  if (!result.success) {
+    // Get the first error message
+    const firstError = result.error.errors[0]
+    const field = firstError.path.join('.')
+    const message = firstError.message
+    return { valid: false, error: `${field ? field + ': ' : ''}${message}` }
   }
 
   return { valid: true }

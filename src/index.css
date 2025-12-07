@@ -2,14 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ocean Depths Theme - Professional Maritime Color Palette */
-:root {
-  --ocean-navy: #1a2332;
-  --ocean-teal: #2d8b8b;
-  --ocean-seafoam: #a8dadc;
-  --ocean-cream: #f1faee;
+/* ===== shadcn/ui Base Layer ===== */
+@layer base {
+  :root {
+    /* Ocean Depths Theme - Professional Maritime Color Palette */
+    --ocean-navy: #1a2332;
+    --ocean-teal: #2d8b8b;
+    --ocean-seafoam: #a8dadc;
+    --ocean-cream: #f1faee;
+
+    /* shadcn/ui CSS variables - Ocean Theme */
+    --background: 148 30% 97%;       /* ocean-cream */
+    --foreground: 216 30% 15%;       /* ocean-navy */
+
+    --card: 0 0% 100%;
+    --card-foreground: 216 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 30% 15%;
+
+    --primary: 180 50% 36%;          /* ocean-teal */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 148 30% 85%;        /* ocean-seafoam light */
+    --secondary-foreground: 216 30% 15%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 180 32% 75%;           /* ocean-seafoam */
+    --accent-foreground: 216 30% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 180 50% 36%;             /* ocean-teal */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 216 30% 12%;
+    --foreground: 148 30% 97%;
+
+    --card: 216 30% 15%;
+    --card-foreground: 148 30% 97%;
+
+    --popover: 216 30% 15%;
+    --popover-foreground: 148 30% 97%;
+
+    --primary: 180 50% 45%;
+    --primary-foreground: 216 30% 12%;
+
+    --secondary: 216 28% 22%;
+    --secondary-foreground: 148 30% 97%;
+
+    --muted: 216 28% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 180 32% 40%;
+    --accent-foreground: 148 30% 97%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 216 28% 22%;
+    --input: 216 28% 22%;
+    --ring: 180 50% 45%;
+  }
 }
 
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* ===== Existing Custom Styles ===== */
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

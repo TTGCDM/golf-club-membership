@@ -1,56 +1,58 @@
-import { useState, useEffect } from 'react'
-
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getMembersWithOutstandingBalance, getMemberStats, downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getPaymentStats, getAllPayments } from '../services/paymentsService'
 import { getAllCategories } from '../services/membershipCategories'
+import { handleError } from '@/utils/errorHandler'
 import jsPDF from 'jspdf'
 
 const Reports = () => {
-  const [outstandingMembers, setOutstandingMembers] = useState([])
-  const [memberStats, setMemberStats] = useState(null)
-  const [paymentStats, setPaymentStats] = useState(null)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [isLoading, setIsLoading] = useState(true)
-
-  const [categories, setCategories] = useState([])
-
-  // Report Builder State
   const [reportType, setReportType] = useState('outstanding')
   const [exportFormat, setExportFormat] = useState('csv')
   const [isGenerating, setIsGenerating] = useState(false)
 
-  useEffect(() => {
-    const fetchReportData = async () => {
-      try {
-        setIsLoading(true)
-        const [outstanding, stats, payments, cats] = await Promise.all([
-          getMembersWithOutstandingBalance(),
-          getMemberStats(),
-          getPaymentStats(selectedYear),
-          getAllCategories()
-        ])
+  // Fetch outstanding members
+  const { data: outstandingMembers = [], isLoading: outstandingLoading } = useQuery({
+    queryKey: ['members', 'outstanding'],
+    queryFn: getMembersWithOutstandingBalance,
+    staleTime: 5 * 60 * 1000,
+  })
 
-        setOutstandingMembers(outstanding)
-        setMemberStats(stats)
-        setPaymentStats(payments)
-        setCategories(cats)
-      } catch (error) {
-        console.error('Error fetching report data:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Fetch member stats
+  const { data: memberStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['members', 'stats'],
+    queryFn: getMemberStats,
+    staleTime: 5 * 60 * 1000,
+  })
 
-    fetchReportData()
-  }, [selectedYear])
+  // Fetch payment stats (depends on selected year)
+  const { data: paymentStats, isLoading: paymentStatsLoading } = useQuery({
+    queryKey: ['payments', 'stats', selectedYear],
+    queryFn: () => getPaymentStats(selectedYear),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+    staleTime: 30 * 60 * 1000,
+  })
+
+  const isLoading = outstandingLoading || statsLoading || paymentStatsLoading
 
   const handleExportOutstanding = () => {
     downloadMembersCSV(outstandingMembers, `outstanding-payments-${new Date().toISOString().split('T')[0]}.csv`)
   }
 
   const handleExportAllMembers = async () => {
-    const allMembers = await getAllMembers()
-    downloadMembersCSV(allMembers, `all-members-${new Date().toISOString().split('T')[0]}.csv`)
+    try {
+      const allMembers = await getAllMembers()
+      downloadMembersCSV(allMembers, `all-members-${new Date().toISOString().split('T')[0]}.csv`)
+    } catch (error) {
+      handleError(error, 'Failed to export members')
+    }
   }
 
   const generateReport = async () => {
@@ -132,8 +134,7 @@ const Reports = () => {
         exportToPDF(data, title, filename)
       }
     } catch (error) {
-      console.error('Error generating report:', error)
-      alert('Failed to generate report. Please try again.')
+      handleError(error, 'Failed to generate report')
     } finally {
       setIsGenerating(false)
     }
@@ -279,8 +280,6 @@ const Reports = () => {
       </div>
     )
   }
-
-
 
   return (
     <div>

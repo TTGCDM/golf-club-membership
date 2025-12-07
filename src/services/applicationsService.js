@@ -14,10 +14,37 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore'
+import { z } from 'zod'
 import { db } from '../firebase'
 import { createMember } from './membersService'
 
 const APPLICATIONS_COLLECTION = 'applications'
+
+// Zod schema for application submission validation
+const applicationSubmissionSchema = z.object({
+  title: z.string().max(10).optional(),
+  fullName: z.string().min(1, 'Full name is required').max(100),
+  streetAddress: z.string().min(1, 'Street address is required').max(200),
+  suburb: z.string().min(1, 'Suburb is required').max(100),
+  state: z.enum(['TAS', 'NSW', 'VIC', 'QLD', 'SA', 'WA', 'NT', 'ACT']),
+  postcode: z.string().regex(/^\d{4}$/, 'Postcode must be 4 digits'),
+  email: z.string().email().max(255),
+  phoneHome: z.string().max(20).optional().default(''),
+  phoneWork: z.string().max(20).optional().default(''),
+  phoneMobile: z.string().min(10, 'Mobile number required').max(20),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  occupation: z.string().max(100).optional().default(''),
+  businessName: z.string().max(200).optional().default(''),
+  businessAddress: z.string().max(200).optional().default(''),
+  businessPostcode: z.string().max(10).optional().default(''),
+  previousClubs: z.string().max(500).optional().default(''),
+  golfLinkNumber: z.string().max(50).optional().default(''),
+  lastHandicap: z.string().max(10).optional().default(''),
+  membershipType: z.enum(['Full', 'Restricted', 'Junior']),
+  captchaScore: z.number().min(0).max(1).optional().default(0),
+  submittedFromIp: z.string().max(50).optional().default(''),
+  userAgent: z.string().max(500).optional().default('')
+})
 
 // Application status constants
 export const APPLICATION_STATUS = {
@@ -48,37 +75,45 @@ export const AUSTRALIAN_STATES = [
  */
 export const submitApplication = async (applicationData, verificationToken, tokenExpiry) => {
   try {
+    // Validate application data with Zod
+    const validation = applicationSubmissionSchema.safeParse(applicationData)
+    if (!validation.success) {
+      throw new Error(`Invalid application data: ${validation.error.errors[0].message}`)
+    }
+
+    const validatedData = validation.data
+
     const newApplication = {
       // Personal details
-      title: applicationData.title,
-      fullName: applicationData.fullName,
+      title: validatedData.title || '',
+      fullName: validatedData.fullName,
 
       // Address
-      streetAddress: applicationData.streetAddress,
-      suburb: applicationData.suburb,
-      state: applicationData.state,
-      postcode: applicationData.postcode,
+      streetAddress: validatedData.streetAddress,
+      suburb: validatedData.suburb,
+      state: validatedData.state,
+      postcode: validatedData.postcode,
 
       // Contact
-      email: applicationData.email,
-      phoneHome: applicationData.phoneHome || '',
-      phoneWork: applicationData.phoneWork || '',
-      phoneMobile: applicationData.phoneMobile,
+      email: validatedData.email,
+      phoneHome: validatedData.phoneHome,
+      phoneWork: validatedData.phoneWork,
+      phoneMobile: validatedData.phoneMobile,
 
       // Personal info
-      dateOfBirth: applicationData.dateOfBirth,
-      occupation: applicationData.occupation || '',
-      businessName: applicationData.businessName || '',
-      businessAddress: applicationData.businessAddress || '',
-      businessPostcode: applicationData.businessPostcode || '',
+      dateOfBirth: validatedData.dateOfBirth,
+      occupation: validatedData.occupation,
+      businessName: validatedData.businessName,
+      businessAddress: validatedData.businessAddress,
+      businessPostcode: validatedData.businessPostcode,
 
       // Golf history
-      previousClubs: applicationData.previousClubs || '',
-      golfLinkNumber: applicationData.golfLinkNumber || '',
-      lastHandicap: applicationData.lastHandicap || '',
+      previousClubs: validatedData.previousClubs,
+      golfLinkNumber: validatedData.golfLinkNumber,
+      lastHandicap: validatedData.lastHandicap,
 
       // Membership type
-      membershipType: applicationData.membershipType,
+      membershipType: validatedData.membershipType,
 
       // Status
       status: APPLICATION_STATUS.SUBMITTED,
@@ -97,9 +132,9 @@ export const submitApplication = async (applicationData, verificationToken, toke
       adminNotes: '',
 
       // Spam prevention
-      submittedFromIp: applicationData.submittedFromIp || '',
-      userAgent: applicationData.userAgent || navigator.userAgent,
-      captchaScore: applicationData.captchaScore || 0,
+      submittedFromIp: validatedData.submittedFromIp,
+      userAgent: validatedData.userAgent || navigator.userAgent,
+      captchaScore: validatedData.captchaScore,
 
       // Timestamps
       submittedAt: serverTimestamp(),

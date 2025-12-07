@@ -1,66 +1,70 @@
 import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { searchMembers } from '../services/membersService'
+import { paymentFormSchema, transformPaymentFormData } from '../schemas'
+import { FormField, FormInput, FormSelect } from './form'
 
 const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember }) => {
-  const [formData, setFormData] = useState({
-    memberId: '',
-    memberName: '',
-    amount: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    paymentMethod: 'bank_transfer',
-    reference: '',
-    notes: ''
-  })
-
   const [memberSearch, setMemberSearch] = useState('')
   const [memberResults, setMemberResults] = useState([])
   const [selectedMember, setSelectedMember] = useState(null)
   const [showResults, setShowResults] = useState(false)
 
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(paymentFormSchema),
+    defaultValues: {
+      memberId: '',
+      memberName: '',
+      amount: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: 'bank_transfer',
+      reference: '',
+      notes: '',
+    },
+  })
+
   // Load existing payment data if editing
   useEffect(() => {
     if (payment) {
-      // eslint-disable-next-line
-      setFormData({
-        memberId: payment.memberId,
-        memberName: payment.memberName,
-        amount: payment.amount,
-        paymentDate: payment.paymentDate,
-        paymentMethod: payment.paymentMethod,
-        reference: payment.reference || '',
-        notes: payment.notes || ''
-      })
+      setValue('memberId', payment.memberId)
+      setValue('memberName', payment.memberName)
+      setValue('amount', String(payment.amount))
+      setValue('paymentDate', payment.paymentDate)
+      setValue('paymentMethod', payment.paymentMethod)
+      setValue('reference', payment.reference || '')
+      setValue('notes', payment.notes || '')
       setSelectedMember({ id: payment.memberId, fullName: payment.memberName })
+      setMemberSearch(payment.memberName)
     }
-  }, [payment])
+  }, [payment, setValue])
 
   // Handle pre-selected member (from URL parameter)
   useEffect(() => {
     if (preSelectedMember && !payment) {
-      // eslint-disable-next-line
       setSelectedMember(preSelectedMember)
+      setValue('memberId', preSelectedMember.id)
+      setValue('memberName', preSelectedMember.fullName)
 
       // Calculate default payment amount
-      // If member has negative balance (owes money), suggest paying the full amount
-      // If member has positive balance (credit), default to empty
       const defaultAmount = preSelectedMember.accountBalance < 0
         ? Math.abs(preSelectedMember.accountBalance).toFixed(2)
         : ''
-
-      setFormData(prev => ({
-        ...prev,
-        memberId: preSelectedMember.id,
-        memberName: preSelectedMember.fullName,
-        amount: defaultAmount
-      }))
+      setValue('amount', defaultAmount)
       setMemberSearch(preSelectedMember.fullName)
     }
-  }, [preSelectedMember, payment])
+  }, [preSelectedMember, payment, setValue])
 
   // Search for members
   useEffect(() => {
     const searchMembersDebounced = async () => {
-      if (memberSearch.length >= 2) {
+      if (memberSearch.length >= 2 && !selectedMember) {
         try {
           const results = await searchMembers(memberSearch)
           setMemberResults(results.filter(m => m.status === 'active'))
@@ -76,63 +80,72 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
 
     const timeoutId = setTimeout(searchMembersDebounced, 300)
     return () => clearTimeout(timeoutId)
-  }, [memberSearch])
+  }, [memberSearch, selectedMember])
 
   const handleMemberSelect = (member) => {
     setSelectedMember(member)
+    setValue('memberId', member.id)
+    setValue('memberName', member.fullName)
 
     // Calculate default payment amount
-    // If member has negative balance (owes money), suggest paying the full amount
-    // If member has positive balance (credit), default to 0
     const defaultAmount = member.accountBalance < 0
       ? Math.abs(member.accountBalance).toFixed(2)
       : ''
-
-    setFormData(prev => ({
-      ...prev,
-      memberId: member.id,
-      memberName: member.fullName,
-      amount: defaultAmount
-    }))
+    setValue('amount', defaultAmount)
     setMemberSearch(member.fullName)
     setShowResults(false)
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleMemberSearchChange = (e) => {
+    const value = e.target.value
+    setMemberSearch(value)
+    // Clear selection if user starts typing again
+    if (selectedMember && value !== selectedMember.fullName) {
+      setSelectedMember(null)
+      setValue('memberId', '')
+      setValue('memberName', '')
+    }
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    onSubmit(formData)
+  const onFormSubmit = (data) => {
+    const transformedData = transformPaymentFormData(data)
+    onSubmit(transformedData)
   }
+
+  // eslint-disable-next-line react-hooks/incompatible-library -- watch() is intentionally reactive
+  const watchMemberId = watch('memberId')
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Member Search */}
           <div className="md:col-span-2 relative">
-            <label htmlFor="memberSearch" className="block text-sm font-medium text-gray-700 mb-1">
-              Member *
-            </label>
-            <input
-              type="text"
-              id="memberSearch"
-              value={memberSearch}
-              onChange={(e) => setMemberSearch(e.target.value)}
-              placeholder="Search by name, email, or Golf Australia ID..."
-              disabled={!!payment || !!preSelectedMember}
-              autoComplete="off"
+            <FormField
+              label="Member"
+              name="memberSearch"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
+              error={errors.memberId?.message}
+            >
+              <input
+                type="text"
+                id="memberSearch"
+                value={memberSearch}
+                onChange={handleMemberSearchChange}
+                placeholder="Search by name, email, or Golf Australia ID..."
+                disabled={!!payment || !!preSelectedMember}
+                autoComplete="off"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal disabled:bg-gray-50 disabled:cursor-not-allowed ${
+                  errors.memberId ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+            </FormField>
+            {/* Hidden inputs for form data */}
+            <input type="hidden" {...register('memberId')} />
+            <input type="hidden" {...register('memberName')} />
+
             {showResults && memberResults.length > 0 && (
               <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                 {memberResults.map(member => (
@@ -168,87 +181,81 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
           </div>
 
           {/* Amount */}
-          <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-              Amount ($) *
-            </label>
-            <input
+          <FormField
+            label="Amount ($)"
+            name="amount"
+            required
+            error={errors.amount?.message}
+          >
+            <FormInput
               type="number"
               id="amount"
-              name="amount"
-              value={formData.amount}
-              onChange={handleChange}
               step="0.01"
               min="0.01"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              error={errors.amount?.message}
+              {...register('amount')}
             />
-          </div>
+          </FormField>
 
           {/* Payment Date */}
-          <div>
-            <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1">
-              Payment Date *
-            </label>
-            <input
+          <FormField
+            label="Payment Date"
+            name="paymentDate"
+            required
+            error={errors.paymentDate?.message}
+          >
+            <FormInput
               type="date"
               id="paymentDate"
-              name="paymentDate"
-              value={formData.paymentDate}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              error={errors.paymentDate?.message}
+              {...register('paymentDate')}
             />
-          </div>
+          </FormField>
 
           {/* Payment Method */}
-          <div>
-            <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
-              Payment Method *
-            </label>
-            <select
+          <FormField
+            label="Payment Method"
+            name="paymentMethod"
+            required
+            error={errors.paymentMethod?.message}
+          >
+            <FormSelect
               id="paymentMethod"
-              name="paymentMethod"
-              value={formData.paymentMethod}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              error={errors.paymentMethod?.message}
+              {...register('paymentMethod')}
             >
               <option value="bank_transfer">Bank Transfer</option>
               <option value="cash">Cash</option>
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
           {/* Reference */}
-          <div>
-            <label htmlFor="reference" className="block text-sm font-medium text-gray-700 mb-1">
-              Reference/Transaction ID
-            </label>
-            <input
+          <FormField
+            label="Reference/Transaction ID"
+            name="reference"
+          >
+            <FormInput
               type="text"
               id="reference"
-              name="reference"
-              value={formData.reference}
-              onChange={handleChange}
               placeholder="Optional"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              {...register('reference')}
             />
-          </div>
+          </FormField>
 
           {/* Notes */}
           <div className="md:col-span-2">
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
-            <textarea
-              id="notes"
+            <FormField
+              label="Notes"
               name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows="3"
-              placeholder="Optional notes or comments"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-            />
+            >
+              <textarea
+                id="notes"
+                rows="3"
+                placeholder="Optional notes or comments"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1"
+                {...register('notes')}
+              />
+            </FormField>
           </div>
 
           {payment && (
@@ -273,7 +280,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
         </button>
         <button
           type="submit"
-          disabled={isLoading || !selectedMember}
+          disabled={isLoading || !watchMemberId}
           className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
         >
           {isLoading ? 'Processing...' : payment ? 'Update Payment' : 'Record Payment'}

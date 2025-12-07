@@ -1,0 +1,43 @@
+# Semgrep ignore file
+# Exclude directories and files from security scanning
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Test files (optional - remove if you want to scan tests)
+*.test.js
+*.test.jsx
+*.spec.js
+*.spec.jsx
+__tests__/
+
+# Coverage
+coverage/
+
+# Firebase emulator data
+.firebase/
+firebase-debug.log
+
+# IDE and editor
+.vscode/
+.idea/
+
+# Environment files (don't scan, but verify they're not committed)
+.env
+.env.local
+.env.*.local
+
+# Generated files
+*.min.js
+*.bundle.js
+
+# Documentation
+*.md
+docs/
+
+# Functions folder (separate project)
+functions/node_modules/

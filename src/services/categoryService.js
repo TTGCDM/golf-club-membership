@@ -11,10 +11,24 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore'
+import { z } from 'zod'
 import { db } from '../firebase'
 import { getAllMembers } from './membersService'
 
 const CATEGORIES_COLLECTION = 'membershipCategories'
+
+// Zod schema for category validation
+const categorySchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  ageMin: z.number().int().min(0).max(150),
+  ageMax: z.number().int().min(0).max(999),
+  playingRights: z.string().max(100).default('7 days'),
+  annualFee: z.number().min(0).max(100000),
+  joiningFee: z.number().min(0).max(100000),
+  order: z.number().int().min(0).max(1000).default(999),
+  isSpecial: z.boolean().default(false),
+  joiningFeeMonths: z.array(z.number().int().min(1).max(12)).default([])
+})
 
 /**
  * Get all membership categories
@@ -65,7 +79,8 @@ export const getCategoryById = async (categoryId) => {
  */
 export const createCategory = async (categoryData) => {
   try {
-    const newCategory = {
+    // Prepare data for validation
+    const dataToValidate = {
       name: categoryData.name,
       ageMin: parseInt(categoryData.ageMin),
       ageMax: parseInt(categoryData.ageMax),
@@ -74,7 +89,17 @@ export const createCategory = async (categoryData) => {
       joiningFee: parseFloat(categoryData.joiningFee),
       order: categoryData.order || 999,
       isSpecial: categoryData.isSpecial || false,
-      joiningFeeMonths: categoryData.joiningFeeMonths || [],
+      joiningFeeMonths: categoryData.joiningFeeMonths || []
+    }
+
+    // Validate with Zod
+    const validation = categorySchema.safeParse(dataToValidate)
+    if (!validation.success) {
+      throw new Error(`Invalid category data: ${validation.error.errors[0].message}`)
+    }
+
+    const newCategory = {
+      ...validation.data,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
@@ -95,9 +120,8 @@ export const createCategory = async (categoryData) => {
  */
 export const updateCategory = async (categoryId, categoryData) => {
   try {
-    const docRef = doc(db, CATEGORIES_COLLECTION, categoryId)
-
-    const updatedData = {
+    // Prepare data for validation
+    const dataToValidate = {
       name: categoryData.name,
       ageMin: parseInt(categoryData.ageMin),
       ageMax: parseInt(categoryData.ageMax),
@@ -106,7 +130,18 @@ export const updateCategory = async (categoryId, categoryData) => {
       joiningFee: parseFloat(categoryData.joiningFee),
       order: categoryData.order,
       isSpecial: categoryData.isSpecial || false,
-      joiningFeeMonths: categoryData.joiningFeeMonths || [],
+      joiningFeeMonths: categoryData.joiningFeeMonths || []
+    }
+
+    // Validate with Zod
+    const validation = categorySchema.safeParse(dataToValidate)
+    if (!validation.success) {
+      throw new Error(`Invalid category data: ${validation.error.errors[0].message}`)
+    }
+
+    const docRef = doc(db, CATEGORIES_COLLECTION, categoryId)
+    const updatedData = {
+      ...validation.data,
       updatedAt: serverTimestamp()
     }
 

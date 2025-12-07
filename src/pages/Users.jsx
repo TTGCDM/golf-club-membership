@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  getAllUsers,
-  getPendingUsers,
-  approveUser,
-  updateUserRole,
-  deactivateUser,
-  reactivateUser,
+  useUsers,
+  usePendingUsers,
+  useApproveUser,
+  useUpdateUserRole,
+  useDeactivateUser,
+  useReactivateUser
+} from '@/hooks/useUsers'
+import {
   canManageUser,
   ROLES,
   ROLE_NAMES,
@@ -14,85 +15,36 @@ import {
 } from '../services/usersService'
 
 const Users = () => {
-  const [users, setUsers] = useState([])
-  const [pendingUsers, setPendingUsers] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
   const { userRole, currentUser } = useAuth()
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
+  const { data: allUsers = [], isLoading: usersLoading, error: usersError } = useUsers()
+  const { data: pendingUsers = [], isLoading: pendingLoading } = usePendingUsers()
 
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true)
-      const [allUsers, pending] = await Promise.all([
-        getAllUsers(),
-        getPendingUsers()
-      ])
+  const approveMutation = useApproveUser()
+  const updateRoleMutation = useUpdateUserRole()
+  const deactivateMutation = useDeactivateUser()
+  const reactivateMutation = useReactivateUser()
 
-      setUsers(allUsers.filter(u => u.status !== USER_STATUS.PENDING))
-      setPendingUsers(pending)
-    } catch (err) {
-      console.error('Error fetching users:', err)
-      setError('Failed to load users')
-    } finally {
-      setIsLoading(false)
-    }
+  // Filter out pending users from allUsers list
+  const users = allUsers.filter(u => u.status !== USER_STATUS.PENDING)
+
+  const handleApprove = (uid, role) => {
+    approveMutation.mutate({ userId: uid, role })
   }
 
-  const handleApprove = async (uid, role) => {
-    try {
-      await approveUser(uid, role)
-      setSuccess('User approved successfully')
-      await fetchUsers()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      console.error('Error approving user:', err)
-      setError('Failed to approve user')
-    }
+  const handleChangeRole = (uid, newRole) => {
+    updateRoleMutation.mutate({ userId: uid, newRole })
   }
 
-  const handleChangeRole = async (uid, newRole) => {
-    try {
-      await updateUserRole(uid, newRole)
-      setSuccess('User role updated successfully')
-      await fetchUsers()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      console.error('Error updating role:', err)
-      setError('Failed to update role')
-    }
-  }
-
-  const handleDeactivate = async (uid) => {
+  const handleDeactivate = (uid) => {
     if (!confirm('Are you sure you want to deactivate this user?')) {
       return
     }
-
-    try {
-      await deactivateUser(uid)
-      setSuccess('User deactivated successfully')
-      await fetchUsers()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      console.error('Error deactivating user:', err)
-      setError('Failed to deactivate user')
-    }
+    deactivateMutation.mutate(uid)
   }
 
-  const handleReactivate = async (uid) => {
-    try {
-      await reactivateUser(uid)
-      setSuccess('User reactivated successfully')
-      await fetchUsers()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      console.error('Error reactivating user:', err)
-      setError('Failed to reactivate user')
-    }
+  const handleReactivate = (uid) => {
+    reactivateMutation.mutate(uid)
   }
 
   const getRoleBadgeColor = (role) => {
@@ -114,6 +66,8 @@ const Users = () => {
     return canManageUser(userRole, targetUserRole)
   }
 
+  const isLoading = usersLoading || pendingLoading
+
   if (isLoading) {
     return (
       <div>
@@ -123,23 +77,21 @@ const Users = () => {
     )
   }
 
+  if (usersError) {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">User Management</h1>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800">Failed to load users</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">User Management</h1>
       <p className="text-gray-600 mb-6">Manage user accounts and permissions</p>
-
-      {/* Success/Error Messages */}
-      {success && (
-        <div className="mb-4 p-4 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
-          <p className="text-ocean-teal">{success}</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
 
       {/* Pending Users Section */}
       {pendingUsers.length > 0 && (
@@ -161,6 +113,7 @@ const Users = () => {
                     onChange={(e) => handleApprove(user.uid, e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
                     defaultValue=""
+                    disabled={approveMutation.isPending}
                   >
                     <option value="" disabled>Approve as...</option>
                     <option value={ROLES.VIEW}>View</option>
@@ -221,6 +174,7 @@ const Users = () => {
                           value={user.role}
                           onChange={(e) => handleChangeRole(user.uid, e.target.value)}
                           className="px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                          disabled={updateRoleMutation.isPending}
                         >
                           <option value={ROLES.VIEW}>View</option>
                           <option value={ROLES.EDIT}>Edit</option>
@@ -249,7 +203,8 @@ const Users = () => {
                       {canManage && (
                         <button
                           onClick={() => handleDeactivate(user.uid)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          disabled={deactivateMutation.isPending}
                         >
                           Deactivate
                         </button>
@@ -302,7 +257,8 @@ const Users = () => {
                         {canManage && (
                           <button
                             onClick={() => handleReactivate(user.uid)}
-                            className="text-ocean-teal hover:text-ocean-navy"
+                            className="text-ocean-teal hover:text-ocean-navy disabled:opacity-50"
+                            disabled={reactivateMutation.isPending}
                           >
                             Reactivate
                           </button>

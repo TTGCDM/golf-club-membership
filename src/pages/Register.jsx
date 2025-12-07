@@ -1,32 +1,33 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../contexts/AuthContext'
+import { registerSchema } from '../schemas'
+import { FormField, FormInput } from '../components/form'
 
 const Register = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const { register } = useAuth()
+  const { register: registerUser } = useAuth()
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  })
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (password !== confirmPassword) {
-      return setError('Passwords do not match')
-    }
-
-    if (password.length < 6) {
-      return setError('Password must be at least 6 characters')
-    }
-
+  const onSubmit = async (data) => {
     try {
       setError('')
-      setLoading(true)
-      await register(email, password)
+      await registerUser(data.email, data.password)
       setSuccess(true)
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
@@ -38,8 +39,6 @@ const Register = () => {
       } else {
         setError('Failed to create account. Please try again.')
       }
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -99,7 +98,7 @@ const Register = () => {
             Register for Tea Tree Golf Club Membership System
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <div className="text-sm text-red-700">{error}</div>
@@ -107,65 +106,59 @@ const Register = () => {
           )}
 
           <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <input
+            <FormField
+              label="Email address"
+              name="email"
+              error={errors.email?.message}
+            >
+              <FormInput
                 id="email"
-                name="email"
                 type="email"
                 autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal focus:z-10 sm:text-sm"
                 placeholder="Email address"
+                error={errors.email?.message}
+                {...register('email')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
+            <FormField
+              label="Password"
+              name="password"
+              error={errors.password?.message}
+            >
+              <FormInput
                 id="password"
-                name="password"
                 type="password"
                 autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal focus:z-10 sm:text-sm"
                 placeholder="Password (min 6 characters)"
+                error={errors.password?.message}
+                {...register('password')}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
+            <FormField
+              label="Confirm Password"
+              name="confirmPassword"
+              error={errors.confirmPassword?.message}
+            >
+              <FormInput
+                id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal focus:z-10 sm:text-sm"
                 placeholder="Confirm password"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
               />
-            </div>
+            </FormField>
           </div>
 
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-ocean-teal hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal disabled:opacity-50"
             >
-              {loading ? 'Creating account...' : 'Register'}
+              {isSubmitting ? 'Creating account...' : 'Register'}
             </button>
           </div>
 

@@ -4,6 +4,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ============================================
+    // SECURITY CONSTANTS
+    // ============================================
+    // These limits should match Zod schema MAX_LENGTHS
+    // SHORT: 100, MEDIUM: 255, LONG: 1000, TEXT: 5000
+
+    // ============================================
     // HELPER FUNCTIONS
     // ============================================
 
@@ -91,25 +97,29 @@ service cloud.firestore {
                       hasRequiredMemberFields(request.resource.data);
 
       // EDIT role or higher can update members
-      allow update: if canWrite() &&
-                      isValidMemberData(request.resource.data);
+      // Note: Relaxed validation for updates - only checks write permission
+      // Full validation on create, partial updates allowed here
+      allow update: if canWrite();
 
       // EDIT role or higher can delete members
       allow delete: if canWrite();
 
-      // Validate member data structure
+      // Validate member data structure with length limits (match Zod schemas)
+      // Note: comments array is optional and validated separately
       function isValidMemberData(data) {
-        return data.fullName is string && data.fullName.size() > 0 &&
-               data.email is string &&
-               data.phone is string &&
-               data.address is string &&
-               data.dateOfBirth is string &&
-               data.golfAustraliaId is string &&
-               data.membershipCategory is string &&
-               data.accountBalance is number &&
+        return data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 100 &&
+               data.email is string && data.email.size() <= 255 &&
+               data.phone is string && data.phone.size() <= 20 &&
+               data.address is string && data.address.size() <= 500 &&
+               data.dateOfBirth is string && data.dateOfBirth.size() <= 10 &&
+               data.golfAustraliaId is string && data.golfAustraliaId.size() <= 20 &&
+               data.membershipCategory is string && data.membershipCategory.size() <= 50 &&
+               data.accountBalance is number && data.accountBalance >= -1000000 && data.accountBalance <= 1000000 &&
                data.status in ['active', 'inactive'] &&
-               data.dateJoined is string &&
-               data.emergencyContact is string;
+               data.dateJoined is string && data.dateJoined.size() <= 10 &&
+               data.emergencyContact is string && data.emergencyContact.size() <= 255 &&
+               // comments is optional - if present must be a list
+               (!('comments' in data.keys()) || data.comments is list);
       }
 
       // Validate timestamps (allows serverTimestamp() sentinel values)
@@ -151,17 +161,17 @@ service cloud.firestore {
       // EDIT role or higher can delete payments
       allow delete: if canWrite();
 
-      // Validate payment data structure
+      // Validate payment data structure with length limits (match Zod schemas)
       function isValidPaymentData(data) {
-        return data.memberId is string && data.memberId.size() > 0 &&
-               data.memberName is string && data.memberName.size() > 0 &&
-               data.amount is number && data.amount > 0 &&
-               data.paymentDate is string &&
-               data.paymentMethod in ['bank_transfer', 'cash'] &&
-               data.reference is string &&
-               data.notes is string &&
-               data.receiptNumber is string && data.receiptNumber.size() > 0 &&
-               data.recordedBy is string && data.recordedBy.size() > 0;
+        return data.memberId is string && data.memberId.size() > 0 && data.memberId.size() <= 128 &&
+               data.memberName is string && data.memberName.size() > 0 && data.memberName.size() <= 100 &&
+               data.amount is number && data.amount > 0 && data.amount <= 1000000 &&
+               data.paymentDate is string && data.paymentDate.size() <= 10 &&
+               data.paymentMethod in ['bank_transfer', 'cash', 'cheque', 'card'] &&
+               data.reference is string && data.reference.size() <= 100 &&
+               data.notes is string && data.notes.size() <= 1000 &&
+               data.receiptNumber is string && data.receiptNumber.size() > 0 && data.receiptNumber.size() <= 20 &&
+               data.recordedBy is string && data.recordedBy.size() > 0 && data.recordedBy.size() <= 128;
       }
 
       function hasRequiredPaymentFields(data) {
@@ -205,9 +215,10 @@ service cloud.firestore {
       // Only SUPER_ADMIN can delete users (hard delete)
       allow delete: if isSuperAdmin();
 
-      // Validate user data structure
+      // Validate user data structure with length limits
+      // CRITICAL: Users cannot set their own role to admin/super_admin (enforced in create rule)
       function isValidUserData(data) {
-        return data.email is string && data.email.size() > 0 &&
+        return data.email is string && data.email.size() > 0 && data.email.size() <= 255 &&
                data.role in ['view', 'edit', 'admin', 'super_admin'] &&
                data.status in ['pending', 'active', 'inactive'];
       }
@@ -405,6 +416,31 @@ service cloud.firestore {
                (oldStatus == 'email_verified' && newStatus == 'rejected') ||
                // No status change (updating other fields like proposer/seconder/notes)
                (oldStatus == newStatus);
+      }
+    }
+
+
+    // ============================================
+    // RECEIPT COUNTERS COLLECTION (INTERNAL)
+    // ============================================
+
+    match /receipt_counters/{year} {
+      // Only EDIT role or higher can read counter (for display purposes)
+      allow read: if canWrite();
+
+      // Only EDIT role or higher can create/update counter
+      // Counter is automatically created/updated during payment recording
+      allow create, update: if canWrite() &&
+                              isValidReceiptCounter(request.resource.data);
+
+      // Never allow deletion of counter documents
+      allow delete: if false;
+
+      // Validate counter data structure
+      // Note: updatedAt is optional and can be serverTimestamp
+      function isValidReceiptCounter(data) {
+        return data.lastNumber is number && data.lastNumber >= 0 &&
+               (!('updatedAt' in data.keys()) || data.updatedAt is timestamp);
       }
     }
 

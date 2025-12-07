@@ -1,56 +1,81 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../contexts/AuthContext'
+import { loginSchema, passwordResetSchema } from '../schemas'
+import { FormField, FormInput } from '../components/form'
 
 const Login = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
   const [resetSuccess, setResetSuccess] = useState(false)
   const [resetError, setResetError] = useState('')
-  const { login, resetPassword } = useAuth()
+  const { login, resetPassword, currentUser } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  // Login form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
 
+  // Password reset form
+  const {
+    register: registerReset,
+    handleSubmit: handleSubmitReset,
+    formState: { errors: resetErrors },
+    reset: resetForm,
+  } = useForm({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: {
+      email: '',
+    },
+  })
+
+  // Navigate to dashboard once auth state is confirmed
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/dashboard')
+    }
+  }, [currentUser, navigate])
+
+  const onSubmit = async (data) => {
     try {
       setError('')
-      setLoading(true)
-      await login(email, password)
-
-      // Navigation will be handled by PrivateRoute which checks status
-      navigate('/dashboard')
-    } catch (error) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      await login(data.email, data.password)
+      // Navigation is handled by the useEffect once auth state updates
+    } catch (err) {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('Invalid email or password')
       } else {
         setError('Failed to sign in. Please try again.')
       }
-      console.error('Login error:', error)
-    } finally {
-      setLoading(false)
+      console.error('Login error:', err)
     }
   }
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault()
+  const onResetPassword = async (data) => {
     setResetError('')
     setResetSuccess(false)
 
     try {
-      await resetPassword(resetEmail)
+      await resetPassword(data.email)
       setResetSuccess(true)
       setTimeout(() => {
         setShowResetPassword(false)
         setResetSuccess(false)
-        setResetEmail('')
+        resetForm()
       }, 3000)
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
         setResetError('No account found with this email address')
       } else {
         setResetError('Failed to send reset email. Please try again.')
@@ -79,21 +104,20 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleResetPassword} className="space-y-6">
-            <div>
-              <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <input
+          <form onSubmit={handleSubmitReset(onResetPassword)} className="space-y-6">
+            <FormField
+              label="Email Address"
+              name="reset-email"
+              error={resetErrors.email?.message}
+            >
+              <FormInput
                 id="reset-email"
                 type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
                 placeholder="your.email@example.com"
+                error={resetErrors.email?.message}
+                {...registerReset('email')}
               />
-            </div>
+            </FormField>
 
             <button
               type="submit"
@@ -129,43 +153,41 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <input
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            label="Email Address"
+            name="email"
+            error={errors.email?.message}
+          >
+            <FormInput
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
               placeholder="admin@teatreegolf.com"
+              error={errors.email?.message}
+              {...register('email')}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
+          <FormField
+            label="Password"
+            name="password"
+            error={errors.password?.message}
+          >
+            <FormInput
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal"
               placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
             />
-          </div>
+          </FormField>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ocean-teal hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
 
           <div className="flex items-center justify-between text-sm">

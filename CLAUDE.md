@@ -161,6 +161,15 @@ Calculated from `dateOfBirth` on member create/update.
   status: 'active' | 'inactive',
   dateJoined: string,
   emergencyContact: string,
+  comments: [                 // Optional - member notes
+    {
+      id: string,
+      text: string,
+      createdAt: string (ISO),
+      createdBy: string (userId),
+      createdByName: string (email)
+    }
+  ],
   createdAt: timestamp,
   updatedAt: timestamp
 }
@@ -173,7 +182,7 @@ Calculated from `dateOfBirth` on member create/update.
   memberName: string,         // Denormalized for quick display
   amount: number,
   paymentDate: string (YYYY-MM-DD),
-  paymentMethod: 'bank_transfer' | 'cash',
+  paymentMethod: 'bank_transfer' | 'cash' | 'cheque' | 'card',
   reference: string,          // Check number, transfer ID, etc.
   notes: string,
   receiptNumber: string,      // Format: R2025-001
@@ -209,6 +218,8 @@ Calculated from `dateOfBirth` on member create/update.
 - `deleteMember(id)` - Soft delete (sets status='inactive')
 - `hardDeleteMember(id)` - Permanent removal (use with caution)
 - `downloadMembersCSV(members)` - Client-side CSV export
+- `addMemberComment(memberId, text, userId, userName)` - Add timestamped note
+- `deleteMemberComment(memberId, commentId)` - Remove a comment
 
 ### paymentsService.js
 - `recordPayment(data, userId)` - **Uses transaction** to record payment + update balance
@@ -319,6 +330,49 @@ if (!checkPermission(ROLES.EDIT)) {
 
 ---
 
+## MCP Server Integration
+
+This project leverages MCP (Model Context Protocol) servers for enhanced development workflows.
+
+### Available Servers
+
+| Server | Purpose | Project Use |
+|--------|---------|-------------|
+| **chrome-devtools** | Browser automation, screenshots, DOM inspection | UI testing, form validation, visual regression |
+| **figma** | Figma design file access | Design specs, asset extraction |
+| **github** | GitHub repos, issues, PRs | PR workflows, code reviews, issue tracking |
+| **playwright** | Browser automation testing | E2E test automation |
+| **memory** | Session context | Conversation continuity |
+| **sequential-thinking** | Extended reasoning | Complex debugging, architecture decisions |
+| **context7** | Long-term memory | Cross-session knowledge |
+
+### Quick Examples
+
+**Test a form submission**:
+```
+take_snapshot → fill_form → click → wait_for → list_console_messages
+```
+
+**Verify page renders correctly**:
+```
+navigate_page → take_snapshot → take_screenshot
+```
+
+**Check for errors**:
+```
+list_console_messages(types: ["error"]) + list_network_requests
+```
+
+See **MCP_WORKFLOWS.md** for detailed project-specific workflows including:
+- Member registration testing
+- Payment flow verification
+- Role-based access testing
+- Dashboard data validation
+- GitHub PR workflows
+- Figma design handoff
+
+---
+
 ## Troubleshooting
 
 ### "Permission denied" errors after deploying rules
@@ -349,19 +403,105 @@ if (!checkPermission(ROLES.EDIT)) {
 
 - **README.md**: Quick start guide, setup instructions
 - **DEPLOYMENT.md**: Complete production deployment guide, security rules, backup configuration
+- **MCP_WORKFLOWS.md**: MCP server workflows for testing and development
 - **firestore.rules**: Security rules with inline comments explaining each check
 
 ---
 
 **Project**: Tea Tree Golf Club Membership Management System
-**Version**: 1.4.0 (Production - Ready)
+**Version**: 2.0.0 (Production)
 **Last Updated**: December 2025
 
 ---
 
 ## Version History
 
-### v1.4.0 - Dashboard Analytics & Report Enhancements (Current)
+### v2.0.0 - Major Platform Upgrade (Current)
+**Deployed**: December 2025
+
+This major version release represents significant platform maturity with new features, improved architecture, and enhanced developer tooling.
+
+**New Features**:
+- **Member Comments/Notes System**:
+  - Timestamped notes on member detail pages
+  - User attribution (who added each note)
+  - Delete capability for notes
+  - Displayed in reverse chronological order
+
+- **Payment Method Expansion**:
+  - Added 'cheque' and 'card' payment types
+  - Updated Firestore security rules to validate new methods
+
+- **UI Component Library (shadcn/ui)**:
+  - Button, Dialog, AlertDialog, Select, Popover, Label components
+  - Command component for combobox functionality
+  - Consistent styling with Tailwind CSS
+
+- **React Query Data Layer**:
+  - Custom hooks: `useMember`, `useMemberPayments`, `useMemberFees`, `useUsers`
+  - Query key factories for cache management
+  - Automatic cache invalidation on mutations
+  - Optimistic updates and error handling
+
+- **Zod Schema Validation**:
+  - Schema definitions for members, payments, users
+  - Type-safe form validation
+  - Centralized validation rules
+
+- **Centralized Error Handling**:
+  - `handleError()` and `showSuccess()` utilities
+  - Sonner toast notifications
+  - Consistent error messaging across app
+
+- **New Relic Browser Monitoring**:
+  - Real user monitoring (RUM) integration
+  - Performance tracking and error reporting
+
+**Bug Fixes**:
+- **Critical: Firestore Transaction Ordering** - Fixed reads-before-writes pattern in payment recording that was causing transaction failures
+- Relaxed Firestore member validation rules for optional fields
+
+**Security & Code Quality**:
+- Husky pre-commit hooks for code quality
+- Semgrep security scanning integration
+- ESLint zero-warning compliance
+- Security audit scripts in package.json
+
+**Architecture Improvements**:
+- Form components directory (`src/components/form/`)
+- Hooks directory with query factories (`src/hooks/`)
+- Schemas directory with Zod definitions (`src/schemas/`)
+- Utility library (`src/lib/`)
+
+### v1.5.1 - Bulk Payment Reminders & PDF Enhancements
+**Deployed**: December 2025
+
+**New Features**:
+- Admin: Bulk Payment Reminder Letter generation for all members with outstanding balances
+- Admin: Preview members list with total outstanding amount before generating
+- Admin: Progress bar and results modal for bulk PDF generation
+- Member Detail: Record Fee button with modal (matches Record Payment UX)
+- Member Detail: Record Payment now uses modal instead of navigation
+
+**PDF Improvements**:
+- Welcome Letter: Matches original club template format
+- Welcome Letter: Shows payment amount when balance owing
+- Welcome Letter: Handles "Last, First" name format correctly
+- Payment Reminder: Consistent format with Welcome Letter
+
+### v1.5.0 - Membership Applications & Member Communications
+**Deployed**: December 2025
+
+**New Features**:
+- Public application form with email verification (reCAPTCHA protected)
+- SendGrid email integration via Cloud Functions
+- Admin application management (view, approve, reject, delete)
+- Admin manual application entry (bypasses email verification)
+- Application PDF generation matching paper form
+- Welcome letter and information pack PDF generator
+- Payment reminder letter PDF generator
+
+### v1.4.0 - Dashboard Analytics & Report Enhancements
 **Status**: Ready for deployment
 
 **New Features**:

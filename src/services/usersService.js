@@ -10,9 +10,28 @@ import {
   orderBy,
   serverTimestamp
 } from 'firebase/firestore'
+import { z } from 'zod'
 import { db } from '../firebase'
 
 const USERS_COLLECTION = 'users'
+
+// Zod schemas for validation
+const userRoleSchema = z.enum(['view', 'edit', 'admin', 'super_admin'])
+const userStatusSchema = z.enum(['pending', 'active', 'inactive'])
+
+const createUserSchema = z.object({
+  email: z.string().email().max(255),
+  role: userRoleSchema,
+  status: userStatusSchema
+})
+
+const updateUserRoleSchema = z.object({
+  role: userRoleSchema
+})
+
+const updateUserStatusSchema = z.object({
+  status: userStatusSchema
+})
 
 // Role hierarchy
 export const ROLES = {
@@ -52,11 +71,17 @@ export const hasPermission = (userRole, requiredRole) => {
 // Create or update user document in Firestore
 export const createUserDocument = async (uid, email, role = ROLES.VIEW, status = USER_STATUS.PENDING) => {
   try {
+    // Validate input
+    const validation = createUserSchema.safeParse({ email, role, status })
+    if (!validation.success) {
+      throw new Error(`Invalid user data: ${validation.error.errors[0].message}`)
+    }
+
     const userRef = doc(db, USERS_COLLECTION, uid)
     const userData = {
-      email,
-      role,
-      status,
+      email: validation.data.email,
+      role: validation.data.role,
+      status: validation.data.status,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
@@ -129,9 +154,15 @@ export const getPendingUsers = async () => {
 // Update user role
 export const updateUserRole = async (uid, newRole) => {
   try {
+    // Validate input
+    const validation = updateUserRoleSchema.safeParse({ role: newRole })
+    if (!validation.success) {
+      throw new Error(`Invalid role: ${validation.error.errors[0].message}`)
+    }
+
     const userRef = doc(db, USERS_COLLECTION, uid)
     await updateDoc(userRef, {
-      role: newRole,
+      role: validation.data.role,
       updatedAt: serverTimestamp()
     })
   } catch (error) {
@@ -143,9 +174,15 @@ export const updateUserRole = async (uid, newRole) => {
 // Update user status
 export const updateUserStatus = async (uid, newStatus) => {
   try {
+    // Validate input
+    const validation = updateUserStatusSchema.safeParse({ status: newStatus })
+    if (!validation.success) {
+      throw new Error(`Invalid status: ${validation.error.errors[0].message}`)
+    }
+
     const userRef = doc(db, USERS_COLLECTION, uid)
     await updateDoc(userRef, {
-      status: newStatus,
+      status: validation.data.status,
       updatedAt: serverTimestamp()
     })
   } catch (error) {

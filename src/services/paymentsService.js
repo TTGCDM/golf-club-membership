@@ -3,10 +3,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  setDoc,
   query,
   where,
   orderBy,
-  limit,
   serverTimestamp,
   runTransaction,
   onSnapshot
@@ -14,8 +14,11 @@ import {
 import { db } from '../firebase'
 import { getMemberById } from './membersService'
 import jsPDF from 'jspdf'
+import { paymentFormSchema, transformPaymentFormData } from '../schemas'
+import { ValidationError } from '../utils/ValidationError'
 
 const PAYMENTS_COLLECTION = 'payments'
+const RECEIPT_COUNTER_COLLECTION = 'receipt_counters'
 
 // ... (existing code)
 
@@ -60,26 +63,42 @@ export const getAllPayments = async () => {
 }
 
 
-// Generate receipt number (format: R2025-001)
+
+// Initialize counter for a year (call once per year, or if counter doesn't exist)
+// This is safe to call multiple times - it won't overwrite existing counter
+export const initializeReceiptCounter = async (year = new Date().getFullYear()) => {
+  try {
+    const counterDocRef = doc(db, RECEIPT_COUNTER_COLLECTION, String(year))
+    const counterDoc = await getDoc(counterDocRef)
+
+    if (!counterDoc.exists()) {
+      // Initialize with 0 - first receipt will be 001
+      await setDoc(counterDocRef, {
+        lastNumber: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+      console.log(`Receipt counter initialized for year ${year}`)
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error initializing receipt counter:', error)
+    throw error
+  }
+}
+
+// Legacy function for backwards compatibility (non-atomic, use with caution)
+// Prefer using the transaction-based approach in recordPayment
 export const generateReceiptNumber = async (year = new Date().getFullYear()) => {
   try {
-    // Get the last payment for the year
-    const q = query(
-      collection(db, PAYMENTS_COLLECTION),
-      where('receiptNumber', '>=', `R${year}-`),
-      where('receiptNumber', '<', `R${year + 1}-`),
-      orderBy('receiptNumber', 'desc'),
-      limit(1)
-    )
-
-    const querySnapshot = await getDocs(q)
+    const counterDocRef = doc(db, RECEIPT_COUNTER_COLLECTION, String(year))
+    const counterDoc = await getDoc(counterDocRef)
 
     let nextNumber = 1
 
-    if (!querySnapshot.empty) {
-      const lastReceipt = querySnapshot.docs[0].data().receiptNumber
-      const lastNumber = parseInt(lastReceipt.split('-')[1])
-      nextNumber = lastNumber + 1
+    if (counterDoc.exists()) {
+      nextNumber = (counterDoc.data().lastNumber || 0) + 1
     }
 
     // Format: R2025-001
@@ -94,25 +113,27 @@ export const generateReceiptNumber = async (year = new Date().getFullYear()) => 
 // Record a payment
 export const recordPayment = async (paymentData, userId) => {
   try {
-    const receiptNumber = await generateReceiptNumber()
-
-    const newPayment = {
-      memberId: paymentData.memberId,
-      memberName: paymentData.memberName, // Store for quick reference
-      amount: parseFloat(paymentData.amount),
-      paymentDate: paymentData.paymentDate,
-      paymentMethod: paymentData.paymentMethod, // 'bank_transfer' or 'cash'
-      reference: paymentData.reference || '',
-      notes: paymentData.notes || '',
-      receiptNumber,
-      recordedBy: userId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+    // Validate with Zod schema (if data is in form format)
+    if (typeof paymentData.amount === 'string') {
+      const validation = paymentFormSchema.safeParse(paymentData)
+      if (!validation.success) {
+        throw new ValidationError(validation.error.flatten())
+      }
+      // Transform form data to payment format
+      paymentData = transformPaymentFormData(paymentData)
     }
 
-    // Use transaction to ensure payment is recorded and balance is updated atomically
-    const paymentDocRef = await runTransaction(db, async (transaction) => {
-      // Get current member data
+    // Use transaction to ensure ALL operations are atomic:
+    // 1. Generate receipt number
+    // 2. Record payment
+    // 3. Update member balance
+    // IMPORTANT: All reads MUST happen before any writes in Firestore transactions
+    const result = await runTransaction(db, async (transaction) => {
+      // === ALL READS FIRST ===
+      const year = new Date().getFullYear()
+      const counterDocRef = doc(db, RECEIPT_COUNTER_COLLECTION, String(year))
+      const counterDoc = await transaction.get(counterDocRef)
+
       const memberRef = doc(db, 'members', paymentData.memberId)
       const memberDoc = await transaction.get(memberRef)
 
@@ -120,9 +141,37 @@ export const recordPayment = async (paymentData, userId) => {
         throw new Error('Member not found')
       }
 
+      // === PROCESS DATA ===
+      // Generate receipt number
+      let nextNumber = 1
+      if (counterDoc.exists()) {
+        nextNumber = (counterDoc.data().lastNumber || 0) + 1
+      }
+      const receiptNumber = `R${year}-${String(nextNumber).padStart(3, '0')}`
+
       const currentBalance = memberDoc.data().accountBalance || 0
-      // Positive balance = credit, so adding payment increases balance (more positive)
       const newBalance = currentBalance + parseFloat(paymentData.amount)
+
+      const newPayment = {
+        memberId: paymentData.memberId,
+        memberName: paymentData.memberName,
+        amount: parseFloat(paymentData.amount),
+        paymentDate: paymentData.paymentDate,
+        paymentMethod: paymentData.paymentMethod,
+        reference: paymentData.reference || '',
+        notes: paymentData.notes || '',
+        receiptNumber,
+        recordedBy: userId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+
+      // === ALL WRITES AFTER READS ===
+      // Update receipt counter
+      transaction.set(counterDocRef, {
+        lastNumber: nextNumber,
+        updatedAt: serverTimestamp()
+      }, { merge: true })
 
       // Add payment
       const paymentRef = doc(collection(db, PAYMENTS_COLLECTION))
@@ -134,10 +183,10 @@ export const recordPayment = async (paymentData, userId) => {
         updatedAt: serverTimestamp()
       })
 
-      return paymentRef
+      return { paymentRef, newPayment }
     })
 
-    return { id: paymentDocRef.id, ...newPayment }
+    return { id: result.paymentRef.id, ...result.newPayment }
   } catch (error) {
     console.error('Error recording payment:', error)
     throw error

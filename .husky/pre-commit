@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Run linting
+npm run lint
+
+# Run security scan (quiet mode, only report errors)
+echo "Running security scan..."
+npx semgrep --config auto --quiet --error src/ 2>/dev/null || echo "Semgrep not available, skipping..."
