@@ -1,0 +1,393 @@
+{
+  "phase": "fine-tuning",
+  "version": "2.0.0",
+  "metrics_history": [
+    {
+      "date": "2025-12-12",
+      "session": "fine-tuning-implementation",
+      "tests": 95,
+      "main_bundle_kb": 738,
+      "build_time_s": 7.46,
+      "lint_warnings": 0
+    },
+    {
+      "date": "2025-12-12",
+      "session": "backlog-low-items",
+      "tests": 95,
+      "main_bundle_kb": 738,
+      "build_time_s": 7.64,
+      "lint_warnings": 0,
+      "notes": "Refactored circular dependency, no bundle size change"
+    },
+    {
+      "date": "2025-12-12",
+      "session": "harness-optimization",
+      "tests": 95,
+      "main_bundle_kb": 738,
+      "build_time_s": 8.54,
+      "lint_warnings": 0,
+      "notes": "Optimized harness for context management"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core Membership Management",
+      "status": "done",
+      "notes": "CRUD for members, CSV import/export, client-side search"
+    },
+    {
+      "name": "Payment System",
+      "status": "done",
+      "notes": "Transaction-based balance updates, receipt generation, 4 payment methods"
+    },
+    {
+      "name": "Role-Based Access Control",
+      "status": "done",
+      "notes": "4-tier hierarchy (VIEW/EDIT/ADMIN/SUPER_ADMIN), AuthContext, protected routes"
+    },
+    {
+      "name": "User Management",
+      "status": "done",
+      "notes": "Registration approval workflow, role assignment, status management"
+    },
+    {
+      "name": "Membership Applications",
+      "status": "done",
+      "notes": "Public form, email verification via SendGrid Cloud Functions, admin approval/rejection"
+    },
+    {
+      "name": "Reports System",
+      "status": "done",
+      "notes": "Report builder with 4 report types, CSV and PDF export, totals"
+    },
+    {
+      "name": "Dashboard Analytics",
+      "status": "done",
+      "notes": "Payment status overview, year selector, active/inactive member charts"
+    },
+    {
+      "name": "PDF Generation",
+      "status": "done",
+      "notes": "Welcome letters, payment reminders, bulk generation, application PDFs"
+    },
+    {
+      "name": "Member Comments/Notes",
+      "status": "done",
+      "notes": "Timestamped notes with user attribution, delete capability"
+    },
+    {
+      "name": "Fee Application System",
+      "status": "done",
+      "notes": "Dynamic categories, annual fee application, category-based calculation"
+    },
+    {
+      "name": "UI Component Library",
+      "status": "done",
+      "notes": "shadcn/ui components: Button, Dialog, AlertDialog, Select, Popover, Command"
+    },
+    {
+      "name": "React Query Data Layer",
+      "status": "done",
+      "notes": "Custom hooks with query key factories, cache invalidation, optimistic updates"
+    },
+    {
+      "name": "Zod Schema Validation",
+      "status": "done",
+      "notes": "Schemas for members, payments, users, applications, categories, fees"
+    },
+    {
+      "name": "Error Handling",
+      "status": "done",
+      "notes": "Centralized handleError/showSuccess utilities, Sonner toast notifications"
+    },
+    {
+      "name": "Security Infrastructure",
+      "status": "done",
+      "notes": "Firestore rules, Husky pre-commit, Semgrep scanning, env validation"
+    },
+    {
+      "name": "New Relic Monitoring",
+      "status": "done",
+      "notes": "Browser RUM integration for performance tracking"
+    },
+    {
+      "name": "Automated Testing",
+      "status": "done",
+      "notes": "95 tests covering payments, auth, PDF edge cases. Run with: npm run test"
+    },
+    {
+      "name": "Bundle Size Optimization",
+      "status": "done",
+      "notes": "Lazy loading implemented - main chunk reduced from 1.5MB to 738KB (51% reduction)"
+    },
+    {
+      "name": "Dynamic Import Warnings",
+      "status": "needs-review",
+      "notes": "Vite build shows circular dependency warnings for category services. Not breaking but could be improved."
+    }
+  ],
+  "frozen_files": [
+    {
+      "path": "firestore.rules",
+      "reason": "Production security rules - any change affects data access for all users"
+    },
+    {
+      "path": "src/contexts/AuthContext.jsx",
+      "reason": "Core auth logic including first-user auto-elevation"
+    },
+    {
+      "path": "src/services/paymentsService.js",
+      "reason": "Transaction-based payment operations - balance integrity critical"
+    },
+    {
+      "path": "functions/index.js",
+      "reason": "Cloud Functions for email - deployed separately"
+    },
+    {
+      "path": "src/firebase.js",
+      "reason": "Firebase initialization - rarely needs changes"
+    },
+    {
+      "path": "src/schemas/*",
+      "reason": "Validation schemas must stay synchronized with Firestore rules"
+    }
+  ],
+  "known_issues": [
+    {
+      "id": "KI-001",
+      "severity": "low",
+      "status": "resolved",
+      "description": "Build produces 1.5MB chunk due to Firebase SDK",
+      "resolution": "Implemented lazy loading - main chunk now 738KB"
+    },
+    {
+      "id": "KI-002",
+      "severity": "low",
+      "description": "Client-side search loads all members",
+      "mitigation": "Acceptable for <1000 members. Document suggests Algolia for scale."
+    },
+    {
+      "id": "KI-003",
+      "severity": "info",
+      "description": "Receipt number generation not transactional",
+      "mitigation": "Low concurrency expected. Documented in CLAUDE.md."
+    },
+    {
+      "id": "KI-004",
+      "severity": "info",
+      "status": "resolved",
+      "description": "No automated test coverage",
+      "resolution": "Added 95 tests covering payment logic, auth flow, and PDF edge cases"
+    },
+    {
+      "id": "KI-005",
+      "severity": "info",
+      "status": "resolved",
+      "description": "CLAUDE.md says v1.0.0 'not yet deployed' but version history shows deployed",
+      "resolution": "Updated Production Deployment status to v2.0.0"
+    },
+    {
+      "id": "KI-006",
+      "severity": "low",
+      "status": "resolved",
+      "description": "Circular dependency warnings in build for category services",
+      "resolution": "Refactored in BL-001: Created dateUtils.js, removed circular import between categoryService and membersService"
+    }
+  ],
+  "backlog": [
+    {
+      "id": "BL-005",
+      "priority": "medium",
+      "status": "deferred",
+      "title": "Implement Algolia search",
+      "description": "Replace client-side member search with Algolia for better scaling beyond 1000 members.",
+      "source_session": "agent-harness-setup",
+      "estimated_effort": "large",
+      "related_issue": "KI-002",
+      "notes": "Only needed if member count grows significantly",
+      "evaluated_session": "backlog-medium-items",
+      "deferral_reason": "Golf club membership unlikely to exceed 1000 members. Current client-side search performs well. Implementation requires: (1) Algolia account setup, (2) npm i algoliasearch react-instantsearch, (3) Cloud Function to sync Firestore→Algolia index, (4) Update searchMembers() to use Algolia API. Revisit if: member count exceeds 500, or search latency becomes noticeable."
+    }
+  ],
+  "backlog_completed": [
+    {
+      "id": "BL-001",
+      "priority": "low",
+      "title": "Refactor circular dependency in category services",
+      "completed_session": "backlog-low-items",
+      "resolution": "Created src/utils/dateUtils.js with calculateAge function. Updated categoryService.js to query members collection directly instead of importing getAllMembers."
+    },
+    {
+      "id": "BL-002",
+      "priority": "medium",
+      "title": "Add E2E tests with Playwright",
+      "completed_session": "backlog-medium-items",
+      "resolution": "Created 4 test files: login.test.md, members.test.md, payments.test.md, dashboard.test.md covering critical user flows"
+    },
+    {
+      "id": "BL-003",
+      "priority": "low",
+      "title": "Add frozen file protection to pre-commit hook",
+      "completed_session": "backlog-low-items",
+      "resolution": "Updated .husky/pre-commit to check staged files against frozen files list."
+    },
+    {
+      "id": "BL-004",
+      "priority": "low",
+      "title": "Add metrics history tracking",
+      "completed_session": "backlog-low-items",
+      "resolution": "Added metrics_history array to claude-progress.json tracking tests, bundle size, build time, lint warnings per session."
+    },
+    {
+      "id": "BL-006",
+      "priority": "medium",
+      "title": "Add agent usage guidelines to CLAUDE.md",
+      "completed_session": "agent-harness-review",
+      "resolution": "Added Agent Usage Guidelines section to CLAUDE.md with table and examples."
+    },
+    {
+      "id": "BL-007",
+      "priority": "medium",
+      "title": "Refactor /harness-check to use parallel agents",
+      "completed_session": "agent-harness-review",
+      "resolution": "Rewrote harness-check.md to spawn 3 parallel agents for file structure, quality gate, and frozen files checks."
+    },
+    {
+      "id": "BL-008",
+      "priority": "low",
+      "title": "Create /explore wrapper command",
+      "completed_session": "agent-harness-review",
+      "resolution": "Created .claude/commands/explore.md with argument-hint and usage examples."
+    },
+    {
+      "id": "BL-009",
+      "priority": "low",
+      "title": "Create /plan-feature command",
+      "completed_session": "agent-harness-review",
+      "resolution": "Created .claude/commands/plan-feature.md with project context and frozen file awareness."
+    }
+  ],
+  "last_updated": "2025-12-12T22:30:00.000Z",
+  "session_log": [
+    {
+      "date": "2025-12-12",
+      "session": "harness-optimization",
+      "summary": "Optimized agent harness for better context management",
+      "changes": [
+        "Updated /status to delegate to haiku agent (reduces context)",
+        "Created /handoff command for auto-generated session handoffs",
+        "Created /metrics command to view metrics trends",
+        "Split CLAUDE.md: core rules (160 lines) + docs/REFERENCE.md (detailed)",
+        "Archived completed backlog items to backlog_completed array"
+      ],
+      "metrics": {
+        "tests": 95,
+        "lint_warnings": 0,
+        "claude_md_lines_before": 714,
+        "claude_md_lines_after": 160
+      },
+      "next_steps": [
+        "Test new commands in fresh session",
+        "Monitor context usage improvement"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "backlog-low-items",
+      "summary": "Completed low priority backlog items",
+      "changes": [
+        "BL-001: Refactored circular dependency",
+        "BL-003: Added frozen file protection to pre-commit hook",
+        "BL-004: Added metrics history tracking"
+      ],
+      "metrics": {
+        "tests": 95,
+        "main_bundle_kb": 738,
+        "build_time_s": 7.64,
+        "lint_warnings": 0
+      },
+      "next_steps": [
+        "All backlog items complete",
+        "Consider adding more backlog items as needs arise"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "backlog-medium-items",
+      "summary": "Completed medium priority backlog items",
+      "changes": [
+        "BL-002: Created E2E test scenarios using chrome-devtools MCP",
+        "BL-005: Evaluated Algolia search - deferred"
+      ],
+      "metrics": {
+        "e2e_test_cases": 24,
+        "backlog_completed": 1,
+        "backlog_deferred": 1
+      },
+      "next_steps": [
+        "Run E2E tests with /test-browser command"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "agent-harness-setup",
+      "summary": "Created agent harness infrastructure for fine-tuning phase",
+      "changes": [
+        "Created claude-progress.json to track feature status",
+        "Identified frozen files for production stability",
+        "Updated CLAUDE.md with Fine-Tuning Rules section",
+        "Created docs/SESSION_HANDOFF.md template"
+      ],
+      "next_steps": [
+        "Add automated tests for critical paths",
+        "Implement lazy loading to reduce bundle size"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "fine-tuning-implementation",
+      "summary": "Implemented immediate fine-tuning tasks: tests, lazy loading",
+      "changes": [
+        "Added 94 tests (payments, auth, PDF edge cases)",
+        "Implemented React.lazy() for all page components",
+        "Main bundle reduced from 1,498KB to 738KB (51% reduction)"
+      ],
+      "metrics": {
+        "tests_added": 94,
+        "total_tests": 95,
+        "bundle_reduction_percent": 51
+      },
+      "next_steps": [
+        "Refactor circular dependency in category services",
+        "Add E2E tests for critical user flows"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "harness-improvements",
+      "summary": "Improved agent harness with /status command and updated documentation",
+      "changes": [
+        "Created .claude/commands/status.md",
+        "Updated CLAUDE.md testing section with test coverage table",
+        "Added Session End Checklist to CLAUDE.md"
+      ],
+      "next_steps": [
+        "Add /harness-check command for deeper validation",
+        "Add frozen file protection to pre-commit hook"
+      ]
+    },
+    {
+      "date": "2025-12-12",
+      "session": "harness-medium-priority",
+      "summary": "Added /harness-check command and backlog tracking",
+      "changes": [
+        "Created .claude/commands/harness-check.md",
+        "Added backlog section to claude-progress.json"
+      ],
+      "next_steps": [
+        "Add frozen file protection to pre-commit hook (BL-003)",
+        "Add metrics history tracking (BL-004)"
+      ]
+    }
+  ]
+}

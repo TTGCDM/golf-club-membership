@@ -1,8 +1,52 @@
 #!/bin/sh
 
-# Run linting
+# === Frozen Files Check ===
+# These files are critical to production stability and should be modified with caution
+# See claude-progress.json for details
+
+FROZEN_FILES="
+firestore.rules
+src/contexts/AuthContext.jsx
+src/services/paymentsService.js
+functions/index.js
+src/firebase.js
+"
+
+# Check if any frozen files are staged for commit
+echo "Checking frozen files..."
+STAGED_FROZEN=""
+for file in $FROZEN_FILES; do
+  if git diff --cached --name-only | grep -q "^$file$"; then
+    STAGED_FROZEN="$STAGED_FROZEN\n  - $file"
+  fi
+done
+
+# Also check for any files in src/schemas/
+if git diff --cached --name-only | grep -q "^src/schemas/"; then
+  SCHEMAS=$(git diff --cached --name-only | grep "^src/schemas/")
+  for schema in $SCHEMAS; do
+    STAGED_FROZEN="$STAGED_FROZEN\n  - $schema"
+  done
+fi
+
+if [ -n "$STAGED_FROZEN" ]; then
+  echo ""
+  echo "⚠️  WARNING: You are modifying FROZEN FILES:"
+  echo "$STAGED_FROZEN"
+  echo ""
+  echo "These files are critical to production stability."
+  echo "Please ensure:"
+  echo "  1. Changes are absolutely necessary"
+  echo "  2. Changes have been thoroughly tested"
+  echo "  3. Security implications have been considered"
+  echo ""
+  echo "Proceeding with commit (warning only)..."
+  echo ""
+fi
+
+# === Run Linting ===
 npm run lint
 
-# Run security scan (quiet mode, only report errors)
+# === Run Security Scan ===
 echo "Running security scan..."
 npx semgrep --config auto --quiet --error src/ 2>/dev/null || echo "Semgrep not available, skipping..."

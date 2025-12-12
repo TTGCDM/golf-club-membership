@@ -8,12 +8,13 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore'
 import { z } from 'zod'
 import { db } from '../firebase'
-import { getAllMembers } from './membersService'
+import { calculateAge } from '../utils/dateUtils'
 
 const CATEGORIES_COLLECTION = 'membershipCategories'
 
@@ -161,13 +162,16 @@ export const updateCategory = async (categoryId, categoryData) => {
  */
 export const deleteCategory = async (categoryId) => {
   try {
-    // Check if any members are using this category
-    const members = await getAllMembers()
-    const membersWithCategory = members.filter(m => m.membershipCategory === categoryId)
+    // Check if any members are using this category (query directly to avoid circular import)
+    const membersQuery = query(
+      collection(db, 'members'),
+      where('membershipCategory', '==', categoryId)
+    )
+    const membersSnapshot = await getDocs(membersQuery)
 
-    if (membersWithCategory.length > 0) {
+    if (!membersSnapshot.empty) {
       throw new Error(
-        `Cannot delete category: ${membersWithCategory.length} member(s) are currently assigned to this category`
+        `Cannot delete category: ${membersSnapshot.size} member(s) are currently assigned to this category`
       )
     }
 
@@ -344,15 +348,8 @@ export const seedDefaultCategories = async () => {
  */
 export const determineCategoryByAge = async (dateOfBirth) => {
   try {
-    // Calculate age
-    const today = new Date()
-    const birthDate = new Date(dateOfBirth)
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
+    // Calculate age using utility function
+    const age = calculateAge(dateOfBirth)
 
     // Get all categories (excluding special ones)
     const categories = await getAllCategories()
