@@ -34,6 +34,7 @@ const Layout = () => {
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="text-xl font-bold">Tea Tree Golf Club</h1>
+                <span className="ml-2 text-xs text-ocean-seafoam opacity-75">v2.2.0</span>
               </div>
               <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
                 <Link

@@ -125,15 +125,19 @@ export const createMember = async (memberData) => {
     const newMember = {
       fullName: memberData.fullName || '',
       email: memberData.email || '',
-      phone: memberData.phone || '',
-      address: memberData.address || '',
+      phoneMobile: memberData.phoneMobile || '',
+      phoneHome: memberData.phoneHome || '',
+      phoneWork: memberData.phoneWork || '',
+      streetAddress: memberData.streetAddress || '',
+      suburb: memberData.suburb || '',
+      state: memberData.state || '',
+      postcode: memberData.postcode || '',
       dateOfBirth: memberData.dateOfBirth || '',
       golfAustraliaId: memberData.golfAustraliaId || '',
       membershipCategory: category,
       accountBalance: memberData.accountBalance || 0,
       status: (memberData.status && memberData.status.trim() !== '') ? memberData.status.toLowerCase() : 'active',
       dateJoined: (memberData.dateJoined && memberData.dateJoined.trim() !== '') ? memberData.dateJoined : today,
-      emergencyContact: memberData.emergencyContact || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
@@ -372,29 +376,37 @@ export const exportMembersToCSV = (members) => {
   const headers = [
     'Full Name',
     'Email',
-    'Phone',
-    'Address',
+    'Phone Mobile',
+    'Phone Home',
+    'Phone Work',
+    'Street Address',
+    'Suburb',
+    'State',
+    'Postcode',
     'Date of Birth',
     'Golf Australia ID',
     'Membership Category',
     'Status',
     'Account Balance',
-    'Date Joined',
-    'Emergency Contact'
+    'Date Joined'
   ]
 
   const rows = members.map(member => [
     member.fullName || '',
     member.email || '',
-    member.phone || '',
-    member.address || '',
+    member.phoneMobile || '',
+    member.phoneHome || '',
+    member.phoneWork || '',
+    member.streetAddress || '',
+    member.suburb || '',
+    member.state || '',
+    member.postcode || '',
     member.dateOfBirth || '',
     member.golfAustraliaId || '',
     member.membershipCategory || '',
     member.status || '',
     member.accountBalance || 0,
-    member.dateJoined || '',
-    member.emergencyContact || ''
+    member.dateJoined || ''
   ])
 
   const csvContent = [
@@ -440,15 +452,19 @@ const parseCSV = (csvText) => {
   const expectedHeaders = [
     'Full Name',
     'Email',
-    'Phone',
-    'Address',
+    'Phone Mobile',
+    'Phone Home',
+    'Phone Work',
+    'Street Address',
+    'Suburb',
+    'State',
+    'Postcode',
     'Date of Birth',
     'Golf Australia ID',
     'Membership Category',
     'Status',
     'Account Balance',
-    'Date Joined',
-    'Emergency Contact'
+    'Date Joined'
   ]
 
   // Validate headers match expected format
@@ -494,15 +510,19 @@ const parseCSV = (csvText) => {
       rowNumber: i + 1,
       fullName: values[0] || '',
       email: values[1] || '',
-      phone: values[2] || '',
-      address: values[3] || '',
-      dateOfBirth: values[4] || '',
-      golfAustraliaId: values[5] || '',
-      membershipCategory: values[6] || '',
-      status: values[7] || 'active',
-      accountBalance: values[8] ? parseFloat(values[8]) : 0,
-      dateJoined: values[9] || '',
-      emergencyContact: values[10] || ''
+      phoneMobile: values[2] || '',
+      phoneHome: values[3] || '',
+      phoneWork: values[4] || '',
+      streetAddress: values[5] || '',
+      suburb: values[6] || '',
+      state: values[7] || '',
+      postcode: values[8] || '',
+      dateOfBirth: values[9] || '',
+      golfAustraliaId: values[10] || '',
+      membershipCategory: values[11] || '',
+      status: values[12] || 'active',
+      accountBalance: values[13] ? parseFloat(values[13]) : 0,
+      dateJoined: values[14] || ''
     }
 
     members.push(member)

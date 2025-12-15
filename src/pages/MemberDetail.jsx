@@ -322,26 +322,42 @@ const MemberDetail = () => {
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900">{member.email}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{member.email || 'N/A'}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                <dd className="mt-1 text-sm text-gray-900">{member.phone}</dd>
+                <dt className="text-sm font-medium text-gray-500">Mobile Phone</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.phoneMobile || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Home Phone</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.phoneHome || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Work Phone</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.phoneWork || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Street Address</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.streetAddress || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Suburb</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.suburb || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">State</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.state || 'N/A'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Postcode</dt>
+                <dd className="mt-1 text-sm text-gray-900">{member.postcode || 'N/A'}</dd>
               </div>
               <div className="md:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Address</dt>
-                <dd className="mt-1 text-sm text-gray-900">{member.address}</dd>
-              </div>
-              <div>
                 <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {member.dateOfBirth}
+                  {member.dateOfBirth || 'N/A'}
                   {age !== null && <span className="text-gray-500"> (Age: {age})</span>}
                 </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Emergency Contact</dt>
-                <dd className="mt-1 text-sm text-gray-900">{member.emergencyContact}</dd>
               </div>
             </dl>
           </div>

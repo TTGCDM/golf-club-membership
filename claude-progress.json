@@ -1,6 +1,6 @@
 {
   "phase": "fine-tuning",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "metrics_history": [
     {
       "date": "2025-12-12",
@@ -195,6 +195,14 @@
     }
   ],
   "backlog": [
+    {
+      "id": "BL-010",
+      "priority": "low",
+      "status": "pending",
+      "title": "Display version number in application banner",
+      "description": "Add the current version number to the application header/banner for easy identification of deployed version.",
+      "source_session": "2025-12-13-deployment"
+    },
     {
       "id": "BL-005",
       "priority": "medium",

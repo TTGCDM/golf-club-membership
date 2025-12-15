@@ -21,10 +21,14 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
     defaultValues: {
       fullName: '',
       email: '',
-      phone: '',
-      address: '',
+      phoneMobile: '',
+      phoneHome: '',
+      phoneWork: '',
+      streetAddress: '',
+      suburb: '',
+      state: '',
+      postcode: '',
       dateOfBirth: '',
-      emergencyContact: '',
       dateJoined: new Date().toISOString().split('T')[0],
       golfAustraliaId: '',
       membershipCategory: '',
@@ -55,10 +59,14 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
     if (member) {
       setValue('fullName', member.fullName || '')
       setValue('email', member.email || '')
-      setValue('phone', member.phone || '')
-      setValue('address', member.address || '')
+      setValue('phoneMobile', member.phoneMobile || '')
+      setValue('phoneHome', member.phoneHome || '')
+      setValue('phoneWork', member.phoneWork || '')
+      setValue('streetAddress', member.streetAddress || '')
+      setValue('suburb', member.suburb || '')
+      setValue('state', member.state || '')
+      setValue('postcode', member.postcode || '')
       setValue('dateOfBirth', member.dateOfBirth || '')
-      setValue('emergencyContact', member.emergencyContact || '')
       setValue('dateJoined', member.dateJoined || '')
       setValue('golfAustraliaId', member.golfAustraliaId || '')
       setValue('membershipCategory', member.membershipCategory || '')
@@ -130,30 +138,43 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
           </FormField>
 
           <FormField
-            label="Phone"
-            name="phone"
-            error={errors.phone?.message}
+            label="Mobile Phone"
+            name="phoneMobile"
+            error={errors.phoneMobile?.message}
           >
             <FormInput
               type="tel"
-              id="phone"
-              error={errors.phone?.message}
-              {...register('phone')}
+              id="phoneMobile"
+              error={errors.phoneMobile?.message}
+              {...register('phoneMobile')}
             />
           </FormField>
 
-          <div className="md:col-span-2">
-            <FormField
-              label="Address"
-              name="address"
-            >
-              <FormInput
-                type="text"
-                id="address"
-                {...register('address')}
-              />
-            </FormField>
-          </div>
+          <FormField
+            label="Home Phone"
+            name="phoneHome"
+            error={errors.phoneHome?.message}
+          >
+            <FormInput
+              type="tel"
+              id="phoneHome"
+              error={errors.phoneHome?.message}
+              {...register('phoneHome')}
+            />
+          </FormField>
+
+          <FormField
+            label="Work Phone"
+            name="phoneWork"
+            error={errors.phoneWork?.message}
+          >
+            <FormInput
+              type="tel"
+              id="phoneWork"
+              error={errors.phoneWork?.message}
+              {...register('phoneWork')}
+            />
+          </FormField>
 
           <FormField
             label="Date of Birth"
@@ -167,15 +188,59 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
             />
           </FormField>
 
+          <div className="md:col-span-2">
+            <FormField
+              label="Street Address"
+              name="streetAddress"
+            >
+              <FormInput
+                type="text"
+                id="streetAddress"
+                {...register('streetAddress')}
+              />
+            </FormField>
+          </div>
+
           <FormField
-            label="Emergency Contact"
-            name="emergencyContact"
+            label="Suburb"
+            name="suburb"
           >
             <FormInput
               type="text"
-              id="emergencyContact"
-              placeholder="Name and phone number"
-              {...register('emergencyContact')}
+              id="suburb"
+              {...register('suburb')}
+            />
+          </FormField>
+
+          <FormField
+            label="State"
+            name="state"
+          >
+            <FormSelect
+              id="state"
+              {...register('state')}
+            >
+              <option value="">Select state</option>
+              <option value="TAS">Tasmania</option>
+              <option value="NSW">New South Wales</option>
+              <option value="VIC">Victoria</option>
+              <option value="QLD">Queensland</option>
+              <option value="SA">South Australia</option>
+              <option value="WA">Western Australia</option>
+              <option value="NT">Northern Territory</option>
+              <option value="ACT">Australian Capital Territory</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField
+            label="Postcode"
+            name="postcode"
+          >
+            <FormInput
+              type="text"
+              id="postcode"
+              maxLength={4}
+              {...register('postcode')}
             />
           </FormField>
         </div>

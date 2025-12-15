@@ -288,10 +288,6 @@ const ApplicationDetails = () => {
               <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
               <dd className="text-sm text-gray-900">{application.dateOfBirth}</dd>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Occupation</dt>
-              <dd className="text-sm text-gray-900">{application.occupation || 'N/A'}</dd>
-            </div>
           </dl>
         </div>
 
@@ -341,25 +337,6 @@ const ApplicationDetails = () => {
           </dl>
         </div>
 
-        {/* Business Information */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Business Information</h2>
-          <dl className="space-y-3">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Business Name</dt>
-              <dd className="text-sm text-gray-900">{application.businessName || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Business Address</dt>
-              <dd className="text-sm text-gray-900">{application.businessAddress || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Business Postcode</dt>
-              <dd className="text-sm text-gray-900">{application.businessPostcode || 'N/A'}</dd>
-            </div>
-          </dl>
-        </div>
-
         {/* Golf History */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Golf History</h2>
@@ -379,14 +356,53 @@ const ApplicationDetails = () => {
           </dl>
         </div>
 
-        {/* Membership Type */}
+        {/* Membership Category */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Membership</h2>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm font-medium text-gray-500">Membership Type</dt>
-              <dd className="text-sm text-gray-900 font-semibold">{application.membershipType}</dd>
+              <dt className="text-sm font-medium text-gray-500">Membership Category</dt>
+              <dd className="text-sm text-gray-900 font-semibold">{application.membershipCategoryName || 'N/A'}</dd>
             </div>
+          </dl>
+        </div>
+
+        {/* Estimated Costs */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Estimated Costs</h2>
+          <dl className="space-y-3">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Pro-Rata Fee</dt>
+              <dd className="text-sm text-gray-900">
+                {application.estimatedProRataFee != null
+                  ? `$${application.estimatedProRataFee.toFixed(2)}`
+                  : 'N/A'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Joining Fee</dt>
+              <dd className="text-sm text-gray-900">
+                {application.estimatedJoiningFee != null
+                  ? `$${application.estimatedJoiningFee.toFixed(2)}`
+                  : 'N/A'}
+              </dd>
+            </div>
+            <div className="pt-2 border-t border-gray-200">
+              <dt className="text-sm font-medium text-gray-500">Total Estimated Cost</dt>
+              <dd className="text-lg text-gray-900 font-bold">
+                {application.estimatedTotalCost != null
+                  ? `$${application.estimatedTotalCost.toFixed(2)}`
+                  : 'N/A'}
+              </dd>
+            </div>
+            {application.estimatedCostCalculatedAt && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Calculated At</dt>
+                <dd className="text-xs text-gray-500">
+                  {new Date(application.estimatedCostCalculatedAt).toLocaleString()}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       </div>

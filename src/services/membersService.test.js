@@ -109,10 +109,14 @@ describe('Member Schema Validation', () => {
       const result = memberFormSchema.safeParse(minimalMember)
       expect(result.success).toBe(true)
       expect(result.data.email).toBe('')
-      expect(result.data.phone).toBe('')
-      expect(result.data.address).toBe('')
+      expect(result.data.phoneMobile).toBe('')
+      expect(result.data.phoneHome).toBe('')
+      expect(result.data.phoneWork).toBe('')
+      expect(result.data.streetAddress).toBe('')
+      expect(result.data.suburb).toBe('')
+      expect(result.data.state).toBe('')
+      expect(result.data.postcode).toBe('')
       expect(result.data.dateOfBirth).toBe('')
-      expect(result.data.emergencyContact).toBe('')
       expect(result.data.golfAustraliaId).toBe('')
       expect(result.data.membershipCategory).toBe('')
     })
@@ -147,10 +151,14 @@ describe('Member Schema Validation', () => {
       const validDoc = {
         fullName: 'John Doe',
         email: 'john@example.com',
-        phone: '0412345678',
-        address: '123 Main St',
+        phoneMobile: '0412345678',
+        phoneHome: '0362345678',
+        phoneWork: '0362345679',
+        streetAddress: '123 Main St',
+        suburb: 'Hobart',
+        state: 'TAS',
+        postcode: '7000',
         dateOfBirth: '1985-06-15',
-        emergencyContact: 'Jane - 0498765432',
         golfAustraliaId: '12345678',
         dateJoined: '2025-01-01',
         membershipCategory: 'full-membership',
@@ -169,8 +177,13 @@ describe('Member Schema Validation', () => {
         fullName: 'John Doe',
         golfAustraliaId: '12345678',
         email: 'john@example.com',
-        phone: '0412345678',
-        address: '123 Main St',
+        phoneMobile: '0412345678',
+        phoneHome: '0362345678',
+        phoneWork: '0362345679',
+        streetAddress: '123 Main St',
+        suburb: 'Hobart',
+        state: 'TAS',
+        postcode: '7000',
         dateOfBirth: '1985-06-15',
         status: 'active'
       }

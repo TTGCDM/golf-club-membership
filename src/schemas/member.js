@@ -16,10 +16,14 @@ import {
 export const memberSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: optionalEmailSchema.optional().default(''),
-  phone: optionalAustralianPhoneSchema.optional().default(''),
-  address: z.string().optional().default(''),
+  phoneMobile: optionalAustralianPhoneSchema.optional().default(''),
+  phoneHome: optionalAustralianPhoneSchema.optional().default(''),
+  phoneWork: optionalAustralianPhoneSchema.optional().default(''),
+  streetAddress: z.string().optional().default(''),
+  suburb: z.string().optional().default(''),
+  state: z.string().optional().default(''),
+  postcode: z.string().optional().default(''),
   dateOfBirth: optionalDateOfBirthSchema.optional().default(''),
-  emergencyContact: z.string().optional().default(''),
   golfAustraliaId: z.string().optional().default(''), // Optional for social members
   dateJoined: dateSchema,
   membershipCategory: z.string().min(1, 'Membership category is required'),
@@ -32,10 +36,14 @@ export const memberSchema = z.object({
 export const memberFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().optional().default(''),
-  phone: z.string().optional().default(''),
-  address: z.string().optional().default(''),
+  phoneMobile: z.string().optional().default(''),
+  phoneHome: z.string().optional().default(''),
+  phoneWork: z.string().optional().default(''),
+  streetAddress: z.string().optional().default(''),
+  suburb: z.string().optional().default(''),
+  state: z.string().optional().default(''),
+  postcode: z.string().optional().default(''),
   dateOfBirth: z.string().optional().default(''),
-  emergencyContact: z.string().optional().default(''),
   golfAustraliaId: z.string().optional().default(''), // Optional for social members
   dateJoined: z.string().min(1, 'Date joined is required'),
   membershipCategory: z.string().optional().default(''), // Auto-determined from DOB if empty
@@ -47,8 +55,13 @@ export const memberCSVRowSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   golfAustraliaId: z.string().min(1, 'Golf Australia ID is required'),
   email: z.string().optional().default(''),
-  phone: z.string().optional().default(''),
-  address: z.string().optional().default(''),
+  phoneMobile: z.string().optional().default(''),
+  phoneHome: z.string().optional().default(''),
+  phoneWork: z.string().optional().default(''),
+  streetAddress: z.string().optional().default(''),
+  suburb: z.string().optional().default(''),
+  state: z.string().optional().default(''),
+  postcode: z.string().optional().default(''),
   dateOfBirth: z
     .string()
     .optional()
@@ -56,7 +69,6 @@ export const memberCSVRowSchema = z.object({
       (val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val),
       'Date of birth must be in YYYY-MM-DD format'
     ),
-  emergencyContact: z.string().optional().default(''),
   dateJoined: z.string().optional().default(''),
   membershipCategory: z.string().optional().default(''),
   status: z
@@ -82,10 +94,14 @@ export const transformCSVRowToMember = (row) => {
     fullName: row.fullName?.trim() || '',
     golfAustraliaId: row.golfAustraliaId?.trim() || '',
     email: row.email?.trim() || '',
-    phone: row.phone?.trim() || '',
-    address: row.address?.trim() || '',
+    phoneMobile: row.phoneMobile?.trim() || '',
+    phoneHome: row.phoneHome?.trim() || '',
+    phoneWork: row.phoneWork?.trim() || '',
+    streetAddress: row.streetAddress?.trim() || '',
+    suburb: row.suburb?.trim() || '',
+    state: row.state?.trim() || '',
+    postcode: row.postcode?.trim() || '',
     dateOfBirth: row.dateOfBirth?.trim() || '',
-    emergencyContact: row.emergencyContact?.trim() || '',
     dateJoined: row.dateJoined?.trim() || new Date().toISOString().split('T')[0],
     membershipCategory: row.membershipCategory?.trim() || '',
     status: row.status?.toLowerCase().trim() || 'active',

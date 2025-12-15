@@ -17,6 +17,7 @@ import {
 import { z } from 'zod'
 import { db } from '../firebase'
 import { createMember } from './membersService'
+import { applyFeeToMember } from './feeService'
 
 const APPLICATIONS_COLLECTION = 'applications'
 
@@ -31,16 +32,20 @@ const applicationSubmissionSchema = z.object({
   email: z.string().email().max(255),
   phoneHome: z.string().max(20).optional().default(''),
   phoneWork: z.string().max(20).optional().default(''),
-  phoneMobile: z.string().min(10, 'Mobile number required').max(20),
+  phoneMobile: z.string().max(20).optional().default(''),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  occupation: z.string().max(100).optional().default(''),
-  businessName: z.string().max(200).optional().default(''),
-  businessAddress: z.string().max(200).optional().default(''),
-  businessPostcode: z.string().max(10).optional().default(''),
   previousClubs: z.string().max(500).optional().default(''),
   golfLinkNumber: z.string().max(50).optional().default(''),
   lastHandicap: z.string().max(10).optional().default(''),
-  membershipType: z.enum(['Full', 'Restricted', 'Junior']),
+  // Membership category selection
+  membershipCategoryId: z.string().min(1, 'Membership category is required'),
+  membershipCategoryName: z.string().max(100).optional().default(''),
+  // Estimated cost fields
+  estimatedProRataFee: z.number().min(0).optional(),
+  estimatedJoiningFee: z.number().min(0).optional(),
+  estimatedTotalCost: z.number().min(0).optional(),
+  estimatedCostCalculatedAt: z.string().optional(),
+  // Meta fields
   captchaScore: z.number().min(0).max(1).optional().default(0),
   submittedFromIp: z.string().max(50).optional().default(''),
   userAgent: z.string().max(500).optional().default('')
@@ -102,18 +107,21 @@ export const submitApplication = async (applicationData, verificationToken, toke
 
       // Personal info
       dateOfBirth: validatedData.dateOfBirth,
-      occupation: validatedData.occupation,
-      businessName: validatedData.businessName,
-      businessAddress: validatedData.businessAddress,
-      businessPostcode: validatedData.businessPostcode,
 
       // Golf history
       previousClubs: validatedData.previousClubs,
       golfLinkNumber: validatedData.golfLinkNumber,
       lastHandicap: validatedData.lastHandicap,
 
-      // Membership type
-      membershipType: validatedData.membershipType,
+      // Membership category
+      membershipCategoryId: validatedData.membershipCategoryId,
+      membershipCategoryName: validatedData.membershipCategoryName || '',
+
+      // Estimated costs (informational, captured at time of application)
+      estimatedProRataFee: validatedData.estimatedProRataFee || null,
+      estimatedJoiningFee: validatedData.estimatedJoiningFee || null,
+      estimatedTotalCost: validatedData.estimatedTotalCost || null,
+      estimatedCostCalculatedAt: validatedData.estimatedCostCalculatedAt || null,
 
       // Status
       status: APPLICATION_STATUS.SUBMITTED,
@@ -123,13 +131,6 @@ export const submitApplication = async (applicationData, verificationToken, toke
       // Email verification
       emailVerificationToken: verificationToken,
       emailVerificationExpiry: Timestamp.fromDate(tokenExpiry),
-
-      // Proposer/Seconder (admin fills these)
-      proposerName: '',
-      seconderName: '',
-
-      // Admin notes
-      adminNotes: '',
 
       // Spam prevention
       submittedFromIp: validatedData.submittedFromIp,
@@ -186,12 +187,23 @@ export const verifyEmail = async (applicationId, token) => {
     }
 
     // Update application to verified status
-    await updateDoc(docRef, {
-      emailVerified: true,
-      status: APPLICATION_STATUS.EMAIL_VERIFIED,
-      verifiedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
+    try {
+      await updateDoc(docRef, {
+        emailVerified: true,
+        status: APPLICATION_STATUS.EMAIL_VERIFIED,
+        verifiedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+    } catch (updateError) {
+      // Handle race condition: if update fails, check if already verified by concurrent request
+      if (updateError.code === 'permission-denied') {
+        const recheckSnap = await getDoc(docRef)
+        if (recheckSnap.exists() && recheckSnap.data().emailVerified) {
+          return true // Concurrent request verified it, return success
+        }
+      }
+      throw updateError
+    }
 
     return true
   } catch (error) {
@@ -296,40 +308,6 @@ export const subscribeToApplications = (callback) => {
 }
 
 /**
- * Update application admin fields (AUTHENTICATED - EDIT role or higher)
- * Allows updating proposer/seconder names and admin notes
- * @param {string} applicationId - Application document ID
- * @param {Object} updates - Fields to update (proposerName, seconderName, adminNotes)
- * @returns {Object} Updated application
- */
-export const updateApplicationAdminFields = async (applicationId, updates) => {
-  try {
-    const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
-
-    const updateData = {
-      updatedAt: serverTimestamp()
-    }
-
-    // Only include allowed fields
-    if (updates.proposerName !== undefined) {
-      updateData.proposerName = updates.proposerName
-    }
-    if (updates.seconderName !== undefined) {
-      updateData.seconderName = updates.seconderName
-    }
-    if (updates.adminNotes !== undefined) {
-      updateData.adminNotes = updates.adminNotes
-    }
-
-    await updateDoc(docRef, updateData)
-    return { id: applicationId, ...updateData }
-  } catch (error) {
-    console.error('Error updating application admin fields:', error)
-    throw error
-  }
-}
-
-/**
  * Approve application and create member (AUTHENTICATED - EDIT role or higher)
  * Uses transaction to ensure atomicity:
  * 1. Create member in members collection
@@ -362,15 +340,19 @@ export const approveApplication = async (applicationId, adminUserId) => {
       const memberData = {
         fullName: application.fullName,
         email: application.email,
-        phone: application.phoneMobile,
-        address: `${application.streetAddress}, ${application.suburb}, ${application.state} ${application.postcode}`,
+        phoneMobile: application.phoneMobile || '',
+        phoneHome: application.phoneHome || '',
+        phoneWork: application.phoneWork || '',
+        streetAddress: application.streetAddress,
+        suburb: application.suburb,
+        state: application.state,
+        postcode: application.postcode,
         dateOfBirth: application.dateOfBirth,
         golfAustraliaId: application.golfLinkNumber || '',
-        // membershipCategory will be auto-determined by createMember based on age
+        membershipCategory: application.membershipCategoryId || '',
         accountBalance: 0, // New member starts with zero balance
         status: 'active',
-        dateJoined: new Date().toISOString().split('T')[0], // Today's date (YYYY-MM-DD)
-        emergencyContact: ''
+        dateJoined: new Date().toISOString().split('T')[0] // Today's date (YYYY-MM-DD)
       }
 
       // Create member (this is done outside transaction to use existing service)
@@ -380,6 +362,20 @@ export const approveApplication = async (applicationId, adminUserId) => {
 
     // Create member using existing service (outside transaction)
     const member = await createMember(result.memberData)
+
+    // Apply estimated costs as initial fee if they exist
+    const application = result.application
+    if (application.estimatedTotalCost && application.estimatedTotalCost > 0) {
+      await applyFeeToMember({
+        memberId: member.id,
+        memberName: member.fullName,
+        amount: application.estimatedTotalCost,
+        feeYear: new Date().getFullYear(),
+        notes: `New Member Fee (Pro-Rata: $${application.estimatedProRataFee?.toFixed(2) || 0}, Joining: $${application.estimatedJoiningFee?.toFixed(2) || 0})`,
+        categoryId: application.membershipCategoryId,
+        categoryName: application.membershipCategoryName || 'New Member'
+      }, adminUserId)
+    }
 
     // Update application with approval details
     await updateDoc(result.applicationRef, {
