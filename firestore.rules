@@ -302,8 +302,10 @@ service cloud.firestore {
                       hasRequiredApplicationFields(request.resource.data);
 
       // PUBLIC READ - For email verification only (no auth required)
-      // Only allow reading applications in 'submitted' status for verification
-      allow read: if resource.data.status == 'submitted';
+      // Allow reading applications in 'submitted' or 'email_verified' status
+      // This allows clicking verification link again to see success message
+      allow read: if resource.data.status == 'submitted' ||
+                     resource.data.status == 'email_verified';
 
       // PUBLIC UPDATE - For email verification only
       // Allows updating verification fields with valid token (no auth required)
@@ -339,22 +341,19 @@ service cloud.firestore {
                data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
                data.phoneHome is string && data.phoneHome.size() <= 20 &&
                data.phoneWork is string && data.phoneWork.size() <= 20 &&
-               data.phoneMobile is string && data.phoneMobile.size() >= 10 && data.phoneMobile.size() <= 20 &&
+               data.phoneMobile is string && data.phoneMobile.size() <= 20 &&
 
-               // Personal (optional fields)
+               // Personal
                data.dateOfBirth is string && data.dateOfBirth.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
-               data.occupation is string && data.occupation.size() <= 100 &&
-               data.businessName is string && data.businessName.size() <= 200 &&
-               data.businessAddress is string && data.businessAddress.size() <= 200 &&
-               data.businessPostcode is string && data.businessPostcode.size() <= 10 &&
 
                // Golf history (optional)
                data.previousClubs is string && data.previousClubs.size() <= 500 &&
                data.golfLinkNumber is string && data.golfLinkNumber.size() <= 50 &&
                data.lastHandicap is string && data.lastHandicap.size() <= 100 &&
 
-               // Membership type
-               data.membershipType in ['Full', 'Restricted', 'Junior'] &&
+               // Membership category (new format with category ID)
+               data.membershipCategoryId is string && data.membershipCategoryId.size() > 0 && data.membershipCategoryId.size() <= 50 &&
+               data.membershipCategoryName is string && data.membershipCategoryName.size() <= 100 &&
 
                // Status fields
                data.status == 'submitted' &&
@@ -371,8 +370,8 @@ service cloud.firestore {
         return data.keys().hasAll([
           'title', 'fullName', 'streetAddress', 'suburb', 'state', 'postcode',
           'email', 'phoneHome', 'phoneWork', 'phoneMobile', 'dateOfBirth',
-          'occupation', 'businessName', 'businessAddress', 'businessPostcode',
-          'previousClubs', 'golfLinkNumber', 'lastHandicap', 'membershipType',
+          'previousClubs', 'golfLinkNumber', 'lastHandicap',
+          'membershipCategoryId', 'membershipCategoryName',
           'status', 'emailVerificationToken', 'emailVerificationExpiry',
           'emailVerified', 'verifiedAt', 'submittedFromIp', 'userAgent', 'captchaScore',
           'proposerName', 'seconderName', 'adminNotes'
