@@ -133,7 +133,7 @@ Email: teatreegolf@bigpond.com
   // Send email
   try {
     await sgMail.send(msg);
-    console.log(`Verification email sent to ${email} for application ${applicationId}`);
+    console.log('Verification email sent to', email, 'for application', applicationId);
     return {success: true, message: 'Verification email sent successfully'};
   } catch (error) {
     console.error('Error sending verification email:', error);
@@ -246,7 +246,7 @@ Tea Tree Golf Club
 
   try {
     await sgMail.send(msg);
-    console.log(`Approval email sent to ${email}`);
+    console.log('Approval email sent to', email);
     return {success: true, message: 'Approval email sent successfully'};
   } catch (error) {
     console.error('Error sending approval email:', error);
@@ -347,7 +347,7 @@ Tea Tree Golf Club
 
   try {
     await sgMail.send(msg);
-    console.log(`Rejection email sent to ${email}`);
+    console.log('Rejection email sent to', email);
     return {success: true, message: 'Rejection email sent successfully'};
   } catch (error) {
     console.error('Error sending rejection email:', error);

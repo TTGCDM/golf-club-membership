@@ -538,7 +538,7 @@ export const deleteApplication = async (applicationId) => {
   try {
     const docRef = doc(db, APPLICATIONS_COLLECTION, applicationId)
     await deleteDoc(docRef)
-    console.log(`Application ${applicationId} deleted successfully`)
+    console.log('Application deleted successfully:', applicationId)
     return true
   } catch (error) {
     console.error('Error deleting application:', error)

@@ -125,7 +125,7 @@ export const handleError = (error, context) => {
 
   // Log error for debugging (in development)
   if (import.meta.env.DEV) {
-    console.error(`[${parsed.type}]`, context || '', error)
+    console.error('[' + parsed.type + ']', context || '', error)
   }
 
   // Show toast notification

@@ -56,7 +56,7 @@ export const clearCollection = async (collectionName, excludeIds = []) => {
 
     return deletedCount
   } catch (error) {
-    console.error(`Error clearing collection ${collectionName}:`, error)
+    console.error('Error clearing collection:', collectionName, error)
     throw error
   }
 }

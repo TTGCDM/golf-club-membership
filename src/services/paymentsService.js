@@ -78,7 +78,7 @@ export const initializeReceiptCounter = async (year = new Date().getFullYear()) 
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       })
-      console.log(`Receipt counter initialized for year ${year}`)
+      console.log('Receipt counter initialized for year', year)
     }
 
     return true
@@ -214,7 +214,7 @@ export const recordBulkPayments = async (payments, userId, onProgress = () => {}
         memberName: paymentData.memberName,
       })
     } catch (error) {
-      console.error(`Failed to record payment for ${paymentData.memberName}:`, error)
+      console.error('Failed to record payment for', paymentData.memberName, error)
       results.failed.push({
         memberId: paymentData.memberId,
         memberName: paymentData.memberName,
