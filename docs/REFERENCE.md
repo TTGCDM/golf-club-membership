@@ -151,6 +151,23 @@ if (!checkPermission(ROLES.EDIT)) {
 )}
 ```
 
+### Adding Plans to Backlog
+
+When the user requests a plan be added to the backlog:
+
+1. Create the plan file in `.claude/plans/` with `Status: BACKLOG` header
+2. **Immediately** add a corresponding entry to `claude-progress.json` backlog array with:
+   - `id`: Next BL-XXX number
+   - `priority`: low/medium/high (ask user if unclear)
+   - `status`: "pending"
+   - `title`: Brief description
+   - `description`: What the plan accomplishes
+   - `source_session`: Current date
+   - `related_files`: Files to be modified
+   - `plan_file`: Name of the .md plan file
+
+Both steps must happen together - a plan file without a backlog entry is incomplete.
+
 ---
 
 ## MCP Server Integration

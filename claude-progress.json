@@ -196,6 +196,19 @@
   ],
   "backlog": [
     {
+      "id": "BL-012",
+      "priority": "low",
+      "status": "pending",
+      "title": "Add logo to sidebar",
+      "description": "Add club logo (docs/New Logo 2026.png) to the sidebar header in Layout.jsx",
+      "source_session": "2026-01-02",
+      "related_files": [
+        "src/components/Layout.jsx",
+        "docs/New Logo 2026.png"
+      ],
+      "plan_file": "atomic-snacking-nova.md"
+    },
+    {
       "id": "BL-011",
       "priority": "medium",
       "status": "pending",
@@ -287,8 +300,24 @@
       "resolution": "Created .claude/commands/plan-feature.md with project context and frozen file awareness."
     }
   ],
-  "last_updated": "2025-12-12T22:30:00.000Z",
+  "last_updated": "2026-01-02T22:45:00.000Z",
   "session_log": [
+    {
+      "date": "2026-01-02",
+      "session": "test-fix-session",
+      "summary": "Fixed failing agent harness test for version management permissions",
+      "changes": [
+        "Updated agentHarness.test.js to recognize wildcard patterns (Bash(npm:*), Bash(git:*)) as valid version management permissions"
+      ],
+      "metrics": {
+        "tests": 376,
+        "lint_warnings": 0
+      },
+      "next_steps": [
+        "Review and commit uncommitted changes",
+        "Consider BL-012 (add logo to sidebar)"
+      ]
+    },
     {
       "date": "2025-12-12",
       "session": "harness-optimization",

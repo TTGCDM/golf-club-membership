@@ -303,8 +303,10 @@ describe('Agent Harness Configuration', () => {
       const permissions = settings.permissions?.allow || []
 
       // Check that npm version and git tag commands are allowed
+      // Wildcard patterns like Bash(npm:*) and Bash(git:*) cover these commands
       const hasVersionPermissions = permissions.some(p =>
-        p.includes('npm version') || p.includes('git tag')
+        p.includes('npm version') || p.includes('git tag') ||
+        p === 'Bash(npm:*)' || p === 'Bash(git:*)'
       )
       expect(hasVersionPermissions).toBe(true)
     })
