@@ -7,8 +7,10 @@ import {
   updateCategory,
   deleteCategory,
   reorderCategories,
-  seedDefaultCategories
+  seedDefaultCategories,
+  generateDefaultProRataRates
 } from '../services/categoryService'
+import ProRataRateEditor from './ProRataRateEditor'
 import { categoryFormSchema } from '../schemas'
 import { FormField, FormInput } from './form'
 
@@ -20,6 +22,7 @@ const CategoryManager = () => {
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [joiningFeeMonths, setJoiningFeeMonths] = useState([])
+  const [editingRates, setEditingRates] = useState(null)
 
   const {
     register,
@@ -118,27 +121,34 @@ const CategoryManager = () => {
       setError(null)
       setSuccess(null)
 
+      const newAnnualFee = parseFloat(data.annualFee)
       const categoryData = {
         name: data.name,
         ageMin: parseInt(data.ageMin, 10),
         ageMax: parseInt(data.ageMax, 10),
         playingRights: data.playingRights,
-        annualFee: parseFloat(data.annualFee),
+        annualFee: newAnnualFee,
         joiningFee: parseFloat(data.joiningFee),
         isSpecial: data.isSpecial,
         joiningFeeMonths: joiningFeeMonths,
       }
 
       if (editingCategory) {
+        // Check if annual fee changed - if so, regenerate pro-rata rates
+        if (editingCategory.annualFee !== newAnnualFee) {
+          categoryData.proRataRates = generateDefaultProRataRates(newAnnualFee)
+        }
+
         // Update existing category
         await updateCategory(editingCategory.id, {
           ...categoryData,
           order: editingCategory.order
         })
-        setSuccess('Category updated successfully')
+        setSuccess('Category updated successfully' + (editingCategory.annualFee !== newAnnualFee ? ' (pro-rata rates recalculated)' : ''))
       } else {
-        // Create new category
+        // Create new category with default pro-rata rates
         const order = categories.length + 1
+        categoryData.proRataRates = generateDefaultProRataRates(newAnnualFee)
         await createCategory({ ...categoryData, order })
         setSuccess('Category created successfully')
       }
@@ -210,18 +220,27 @@ const CategoryManager = () => {
     }
   }
 
+  const handleSaveRates = async () => {
+    setSuccess('Pro-rata rates saved successfully')
+    setEditingRates(null)
+    await loadCategories()
+  }
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+      <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center">
         <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
         Membership Categories
       </h2>
+      <p className="text-sm text-gray-600 mb-4">
+        Manage membership categories and their fees. Click <span className="text-purple-600 font-medium">Rates</span> to view/edit pro-rata rates for new members joining mid-year. Rates are auto-calculated from the annual fee but can be manually adjusted. Changing the annual fee will recalculate all rates.
+      </p>
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal text-ocean-teal px-4 py-3 rounded mb-4">
+        <div className="bg-secondary/20 border border-primary text-primary px-4 py-3 rounded mb-4">
           {success}
         </div>
       )}
@@ -240,7 +259,7 @@ const CategoryManager = () => {
           </p>
           <button
             onClick={handleSeedCategories}
-            className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
           >
             Initialize Default Categories
           </button>
@@ -251,7 +270,7 @@ const CategoryManager = () => {
       <div className="mb-4">
         <button
           onClick={openAddForm}
-          className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
         >
           + Add New Category
         </button>
@@ -313,9 +332,15 @@ const CategoryManager = () => {
                   <td className="px-4 py-3 text-sm space-x-2">
                     <button
                       onClick={() => openEditForm(category)}
-                      className="text-ocean-teal hover:text-ocean-navy"
+                      className="text-primary hover:text-primary/80"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => setEditingRates(category)}
+                      className="text-purple-600 hover:text-purple-800"
+                    >
+                      Rates
                     </button>
                     <button
                       onClick={() => handleDelete(category.id, category.name)}
@@ -473,7 +498,7 @@ const CategoryManager = () => {
                         type="button"
                         onClick={() => toggleJoiningFeeMonth(month.num)}
                         className={`px-2 py-1 text-xs rounded ${joiningFeeMonths.includes(month.num)
-                            ? 'bg-ocean-teal text-white'
+                            ? 'bg-primary text-white'
                             : 'bg-gray-100 text-gray-600'
                           }`}
                       >
@@ -496,7 +521,7 @@ const CategoryManager = () => {
               <div className="flex space-x-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
                 >
                   {editingCategory ? 'Update Category' : 'Create Category'}
                 </button>
@@ -511,6 +536,15 @@ const CategoryManager = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Pro-Rata Rate Editor Modal */}
+      {editingRates && (
+        <ProRataRateEditor
+          category={editingRates}
+          onSave={handleSaveRates}
+          onClose={() => setEditingRates(null)}
+        />
       )}
     </div>
   )

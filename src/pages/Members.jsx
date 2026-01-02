@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { downloadMembersCSV, getAllMembers } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // SortIcon component moved outside to avoid re-creation during render
 const SortIcon = ({ column, sortColumn, sortDirection }) => {
@@ -16,13 +22,13 @@ const SortIcon = ({ column, sortColumn, sortDirection }) => {
   }
   if (sortDirection === 'asc') {
     return (
-      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 text-club-navy ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
       </svg>
     )
   }
   return (
-    <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-club-navy ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   )
@@ -30,7 +36,6 @@ const SortIcon = ({ column, sortColumn, sortDirection }) => {
 
 const Members = () => {
   const { checkPermission, ROLES } = useAuth()
-  const [filteredMembers, setFilteredMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -58,43 +63,41 @@ const Members = () => {
 
   const isLoading = membersLoading || categoriesLoading
 
-  useEffect(() => {
-    const applyFilters = () => {
-      let filtered = [...members]
+  // Derive filtered members using useMemo (not useEffect + useState)
+  // This avoids infinite loops from array reference changes
+  const filteredMembers = useMemo(() => {
+    let filtered = [...members]
 
-      // Apply search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase()
-        filtered = filtered.filter(member =>
-          member.fullName?.toLowerCase().includes(searchLower) ||
-          member.email?.toLowerCase().includes(searchLower) ||
-          member.golfAustraliaId?.toLowerCase().includes(searchLower)
-        )
-      }
-
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        filtered = filtered.filter(member => member.status === statusFilter)
-      }
-
-      // Apply category filter
-      if (categoryFilter !== 'all') {
-        filtered = filtered.filter(member => member.membershipCategory === categoryFilter)
-      }
-
-      // Apply balance filter
-      if (balanceFilter === 'positive') {
-        filtered = filtered.filter(member => (member.accountBalance || 0) > 0)
-      } else if (balanceFilter === 'negative') {
-        filtered = filtered.filter(member => (member.accountBalance || 0) < 0)
-      } else if (balanceFilter === 'zero') {
-        filtered = filtered.filter(member => (member.accountBalance || 0) === 0)
-      }
-
-      setFilteredMembers(filtered)
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(member =>
+        member.fullName?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.golfAustraliaId?.toLowerCase().includes(searchLower)
+      )
     }
 
-    applyFilters()
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(member => member.status === statusFilter)
+    }
+
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(member => member.membershipCategory === categoryFilter)
+    }
+
+    // Apply balance filter
+    if (balanceFilter === 'positive') {
+      filtered = filtered.filter(member => (member.accountBalance || 0) > 0)
+    } else if (balanceFilter === 'negative') {
+      filtered = filtered.filter(member => (member.accountBalance || 0) < 0)
+    } else if (balanceFilter === 'zero') {
+      filtered = filtered.filter(member => (member.accountBalance || 0) === 0)
+    }
+
+    return filtered
   }, [members, searchTerm, statusFilter, categoryFilter, balanceFilter])
 
   const handleExportCSV = () => {
@@ -102,7 +105,7 @@ const Members = () => {
   }
 
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-ocean-teal' // Positive = credit
+    if (balance > 0) return 'text-club-navy' // Positive = credit
     if (balance < 0) return 'text-red-600'   // Negative = owes money
     return 'text-gray-900'
   }
@@ -160,7 +163,7 @@ const Members = () => {
         {canEdit && (
           <Link
             to="/members/add"
-            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
+            className="px-4 py-2 bg-club-navy text-white rounded-md hover:bg-club-navy-dark"
           >
             Add Member
           </Link>
@@ -168,178 +171,175 @@ const Members = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="md:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              id="search"
-              placeholder="Search by name, email, or Golf Australia ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-            />
+      <Card className="mb-6">
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="md:col-span-2">
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search by name, email, or Golf Australia ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Balance
+              </label>
+              <Select value={balanceFilter} onValueChange={setBalanceFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Balances" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Balances</SelectItem>
+                  <SelectItem value="positive">Positive (Credit)</SelectItem>
+                  <SelectItem value="negative">Negative (Owing)</SelectItem>
+                  <SelectItem value="zero">Zero Balance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              id="status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              Export to CSV
+            </button>
           </div>
-
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
-            </label>
-            <select
-              id="category"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="balance" className="block text-sm font-medium text-gray-700 mb-1">
-              Balance
-            </label>
-            <select
-              id="balance"
-              value={balanceFilter}
-              onChange={(e) => setBalanceFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
-            >
-              <option value="all">All Balances</option>
-              <option value="positive">Positive (Credit)</option>
-              <option value="negative">Negative (Owing)</option>
-              <option value="zero">Zero Balance</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Export to CSV
-          </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Members Table */}
       {filteredMembers.length === 0 ? (
-        <div className="bg-white shadow rounded-lg p-6 text-center">
-          <p className="text-gray-600">No members found</p>
-        </div>
+        <Card>
+          <CardContent className="py-6 text-center">
+            <p className="text-gray-600">No members found</p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead
                   onClick={() => handleSort('fullName')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   Name <SortIcon column="fullName" sortColumn={sortColumn} sortDirection={sortDirection} />
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   onClick={() => handleSort('email')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   Email <SortIcon column="email" sortColumn={sortColumn} sortDirection={sortDirection} />
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   onClick={() => handleSort('membershipCategory')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   Category <SortIcon column="membershipCategory" sortColumn={sortColumn} sortDirection={sortDirection} />
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   onClick={() => handleSort('status')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   Status <SortIcon column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   onClick={() => handleSort('accountBalance')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   Balance <SortIcon column="accountBalance" sortColumn={sortColumn} sortDirection={sortDirection} />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+                </TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {sortedMembers.map(member => {
                 const category = categories.find(c => c.id === member.membershipCategory)
                 return (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{member.fullName}</div>
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="font-medium">{member.fullName}</div>
                       {member.golfAustraliaId && (
-                        <div className="text-sm text-gray-500">GA: {member.golfAustraliaId}</div>
+                        <div className="text-sm text-muted-foreground">GA: {member.golfAustraliaId}</div>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {member.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {category?.name || member.membershipCategory}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active'
-                        ? 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
-                        : 'bg-gray-100 text-gray-800'
-                        }`}>
+                    </TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell>{category?.name || member.membershipCategory}</TableCell>
+                    <TableCell>
+                      <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
                         {member.status}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(member.accountBalance || 0)}`}>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`font-medium ${getBalanceColor(member.accountBalance || 0)}`}>
                       ${(member.accountBalance || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </TableCell>
+                    <TableCell>
                       <Link
                         to={`/members/${member.id}`}
-                        className="text-ocean-teal hover:text-ocean-navy mr-3"
+                        className="text-club-navy hover:text-club-navy-dark mr-3"
                       >
                         View
                       </Link>
                       {canEdit && (
                         <Link
                           to={`/members/${member.id}/edit`}
-                          className="text-ocean-teal hover:text-ocean-navy"
+                          className="text-club-navy hover:text-club-navy-dark"
                         >
                           Edit
                         </Link>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   )

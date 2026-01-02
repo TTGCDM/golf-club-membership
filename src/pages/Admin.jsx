@@ -231,9 +231,9 @@ const Admin = () => {
               <p className="text-sm text-gray-600">Total Members</p>
               <p className="text-3xl font-bold text-blue-600">{dataStats.members}</p>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="bg-success/10 p-4 rounded-lg">
               <p className="text-sm text-gray-600">Total Payments</p>
-              <p className="text-3xl font-bold text-green-600">{dataStats.payments}</p>
+              <p className="text-3xl font-bold text-success">{dataStats.payments}</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">Total Users</p>
@@ -274,7 +274,7 @@ const Admin = () => {
           <button
             onClick={handleExportData}
             disabled={isExporting}
-            className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -318,9 +318,9 @@ const Admin = () => {
             Full Name, Email, Phone, Address, Date of Birth, Golf Australia ID, Membership Category, Status, Account Balance, Date Joined, Emergency Contact
           </p>
 
-          <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
-            <p className="text-sm font-semibold text-green-900 mb-1">✅ Required Fields (only 2!):</p>
-            <ul className="text-sm text-green-800 list-disc list-inside ml-2">
+          <div className="bg-success/10 border border-success/40 rounded p-3 mb-3">
+            <p className="text-sm font-semibold text-success mb-1">✅ Required Fields (only 2!):</p>
+            <ul className="text-sm text-success list-disc list-inside ml-2">
               <li><strong>Full Name</strong> - Member&apos;s name</li>
               <li><strong>Golf Australia ID</strong> - Unique identifier</li>
             </ul>
@@ -344,7 +344,7 @@ const Admin = () => {
           </ul>
 
           <div className="flex items-center space-x-4">
-            <label className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy cursor-pointer transition-colors">
+            <label className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 cursor-pointer transition-colors">
               {isUploading ? 'Uploading...' : 'Choose CSV File'}
               <input
                 type="file"
@@ -396,7 +396,7 @@ const Admin = () => {
             <button
               onClick={handleGenerateBulkPDFs}
               disabled={isGeneratingPDFs || outstandingMembers.length === 0}
-              className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -417,7 +417,7 @@ const Admin = () => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-ocean-teal h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(pdfProgress.current / pdfProgress.total) * 100}%` }}
                 />
               </div>
@@ -575,9 +575,9 @@ const Admin = () => {
                   <p className="text-sm text-gray-600">Total Rows</p>
                   <p className="text-2xl font-bold text-gray-900">{uploadResults.total}</p>
                 </div>
-                <div className="bg-green-50 p-4 rounded">
+                <div className="bg-success/10 p-4 rounded">
                   <p className="text-sm text-gray-600">Successful</p>
-                  <p className="text-2xl font-bold text-green-600">{uploadResults.successful}</p>
+                  <p className="text-2xl font-bold text-success">{uploadResults.successful}</p>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded">
                   <p className="text-sm text-gray-600">Skipped</p>
@@ -606,14 +606,14 @@ const Admin = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {uploadResults.details.map((detail, index) => (
                           <tr key={index} className={
-                            detail.status === 'success' ? 'bg-green-50' :
+                            detail.status === 'success' ? 'bg-success/10' :
                               detail.status === 'skipped' ? 'bg-yellow-50' :
                                 'bg-red-50'
                           }>
                             <td className="px-4 py-2 text-sm text-gray-900">{detail.row}</td>
                             <td className="px-4 py-2 text-sm text-gray-900">{detail.name || '-'}</td>
                             <td className="px-4 py-2 text-sm">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${detail.status === 'success' ? 'bg-green-200 text-green-800' :
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${detail.status === 'success' ? 'bg-success/20 text-success' :
                                 detail.status === 'skipped' ? 'bg-yellow-200 text-yellow-800' :
                                   'bg-red-200 text-red-800'
                                 }`}>
@@ -633,7 +633,7 @@ const Admin = () => {
             <div className="p-6 border-t">
               <button
                 onClick={closeUploadResults}
-                className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
               >
                 Close
               </button>
@@ -667,9 +667,9 @@ const Admin = () => {
                   <p className="text-sm text-gray-600">Total</p>
                   <p className="text-2xl font-bold text-gray-900">{pdfResults.total}</p>
                 </div>
-                <div className="bg-green-50 p-4 rounded">
+                <div className="bg-success/10 p-4 rounded">
                   <p className="text-sm text-gray-600">Successful</p>
-                  <p className="text-2xl font-bold text-green-600">{pdfResults.successful}</p>
+                  <p className="text-2xl font-bold text-success">{pdfResults.successful}</p>
                 </div>
                 <div className="bg-red-50 p-4 rounded">
                   <p className="text-sm text-gray-600">Failed</p>
@@ -692,7 +692,7 @@ const Admin = () => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {pdfResults.details.map((detail, index) => (
-                          <tr key={index} className={detail.status === 'success' ? 'bg-green-50' : 'bg-red-50'}>
+                          <tr key={index} className={detail.status === 'success' ? 'bg-success/10' : 'bg-red-50'}>
                             <td className="px-4 py-2 text-sm text-gray-900">{detail.memberName}</td>
                             <td className="px-4 py-2 text-sm text-red-600 text-right font-medium">
                               ${detail.amountOwing.toFixed(2)}
@@ -700,7 +700,7 @@ const Admin = () => {
                             <td className="px-4 py-2 text-sm">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
                                 detail.status === 'success'
-                                  ? 'bg-green-200 text-green-800'
+                                  ? 'bg-success/20 text-success'
                                   : 'bg-red-200 text-red-800'
                               }`}>
                                 {detail.status === 'success' ? 'Downloaded' : 'Failed'}
@@ -718,7 +718,7 @@ const Admin = () => {
             <div className="p-6 border-t">
               <button
                 onClick={closePdfResults}
-                className="px-4 py-2 bg-ocean-teal text-white rounded hover:bg-ocean-navy transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
               >
                 Close
               </button>

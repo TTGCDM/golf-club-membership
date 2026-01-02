@@ -28,7 +28,8 @@ const categorySchema = z.object({
   joiningFee: z.number().min(0).max(100000),
   order: z.number().int().min(0).max(1000).default(999),
   isSpecial: z.boolean().default(false),
-  joiningFeeMonths: z.array(z.number().int().min(1).max(12)).default([])
+  joiningFeeMonths: z.array(z.number().int().min(1).max(12)).default([]),
+  proRataRates: z.record(z.string(), z.number().min(0)).optional()
 })
 
 /**
@@ -90,7 +91,8 @@ export const createCategory = async (categoryData) => {
       joiningFee: parseFloat(categoryData.joiningFee),
       order: categoryData.order || 999,
       isSpecial: categoryData.isSpecial || false,
-      joiningFeeMonths: categoryData.joiningFeeMonths || []
+      joiningFeeMonths: categoryData.joiningFeeMonths || [],
+      proRataRates: categoryData.proRataRates
     }
 
     // Validate with Zod
@@ -131,7 +133,8 @@ export const updateCategory = async (categoryId, categoryData) => {
       joiningFee: parseFloat(categoryData.joiningFee),
       order: categoryData.order,
       isSpecial: categoryData.isSpecial || false,
-      joiningFeeMonths: categoryData.joiningFeeMonths || []
+      joiningFeeMonths: categoryData.joiningFeeMonths || [],
+      proRataRates: categoryData.proRataRates
     }
 
     // Validate with Zod
@@ -233,7 +236,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 0,
         order: 1,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(50)
       },
       {
         name: 'Junior 13-15 years',
@@ -244,7 +248,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 0,
         order: 2,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(120)
       },
       {
         name: 'Junior 16-18 years',
@@ -255,7 +260,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 0,
         order: 3,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(180)
       },
       {
         name: 'Colts',
@@ -266,7 +272,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 50,
         order: 4,
         isSpecial: false,
-        joiningFeeMonths: [8, 9, 10, 11, 12]
+        joiningFeeMonths: [8, 9, 10, 11, 12],
+        proRataRates: generateDefaultProRataRates(300)
       },
       {
         name: 'Full Membership',
@@ -277,7 +284,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 25,
         order: 5,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(480)
       },
       {
         name: 'Senior Full Membership',
@@ -288,7 +296,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 25,
         order: 6,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(435)
       },
       {
         name: 'Life & Honorary Members',
@@ -299,7 +308,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 0,
         order: 7,
         isSpecial: false,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(75)
       },
       {
         name: 'Non-playing/Social',
@@ -310,7 +320,8 @@ export const seedDefaultCategories = async () => {
         joiningFee: 25,
         order: 8,
         isSpecial: true,
-        joiningFeeMonths: []
+        joiningFeeMonths: [],
+        proRataRates: generateDefaultProRataRates(40)
       }
     ]
 
@@ -373,10 +384,158 @@ export const determineCategoryByAge = async (dateOfBirth) => {
 }
 
 /**
+ * Calculate the default pro-rata rate for a given month using formula
+ * Membership year: March (3) = 12 months, February (2) = 1 month
+ * @param {number} annualFee - Annual fee amount
+ * @param {number} month - Calendar month (1-12)
+ * @returns {number} Calculated rate
+ */
+export const calculateDefaultProRataRate = (annualFee, month) => {
+  // March=12 months, April=11, ..., Feb=1
+  const monthsRemaining = month <= 2
+    ? 3 - month  // Jan=2, Feb=1
+    : 15 - month // Mar=12, Apr=11, May=10, Jun=9, Jul=8, Aug=7, Sep=6, Oct=5, Nov=4, Dec=3
+  return Math.round((monthsRemaining / 12) * annualFee)
+}
+
+/**
+ * Generate default pro-rata rates for all 12 months
+ * @param {number} annualFee - Annual fee amount
+ * @returns {Object} Object with month keys (1-12) and calculated rates
+ */
+export const generateDefaultProRataRates = (annualFee) => {
+  const rates = {}
+  for (let month = 1; month <= 12; month++) {
+    rates[String(month)] = calculateDefaultProRataRate(annualFee, month)
+  }
+  return rates
+}
+
+/**
+ * Update pro-rata rates for a category
+ * @param {string} categoryId - Category ID
+ * @param {Object} proRataRates - Object with month keys (1-12) and rate values
+ * @returns {Object} Updated rates
+ */
+export const updateProRataRates = async (categoryId, proRataRates) => {
+  try {
+    // Validate and clean rates
+    const validatedRates = {}
+    for (let month = 1; month <= 12; month++) {
+      const key = String(month)
+      if (proRataRates[key] !== undefined) {
+        const rate = parseFloat(proRataRates[key])
+        if (!isNaN(rate) && rate >= 0) {
+          validatedRates[key] = rate
+        }
+      }
+    }
+
+    const docRef = doc(db, CATEGORIES_COLLECTION, categoryId)
+    await updateDoc(docRef, {
+      proRataRates: validatedRates,
+      updatedAt: serverTimestamp()
+    })
+
+    return { id: categoryId, proRataRates: validatedRates }
+  } catch (error) {
+    console.error('Error updating pro-rata rates:', error)
+    throw error
+  }
+}
+
+/**
+ * Reset pro-rata rates to calculated defaults for a category
+ * @param {string} categoryId - Category ID
+ * @returns {Object} Generated default rates
+ */
+export const resetProRataRates = async (categoryId) => {
+  try {
+    const category = await getCategoryById(categoryId)
+    if (!category) throw new Error('Category not found')
+
+    const defaultRates = generateDefaultProRataRates(category.annualFee)
+    await updateProRataRates(categoryId, defaultRates)
+    return defaultRates
+  } catch (error) {
+    console.error('Error resetting pro-rata rates:', error)
+    throw error
+  }
+}
+
+/**
+ * Calculate pro-rata fee synchronously without database lookup
+ * For use in public forms where categories are already loaded
+ * @param {Object} category - Category object with proRataRates and joiningFee
+ * @param {Date} joiningDate - Date for calculation (defaults to today)
+ * @returns {Object} { proRataSubscription, joiningFee, total, monthsRemaining, currentMonth }
+ */
+export const calculateProRataFeeSync = (category, joiningDate = new Date()) => {
+  if (!category) {
+    return { proRataSubscription: 0, joiningFee: 0, total: 0, monthsRemaining: 0, currentMonth: 0 }
+  }
+
+  const month = joiningDate.getMonth() + 1 // 1-12
+  const monthKey = String(month)
+
+  // Calculate months remaining in membership year (March-February)
+  const monthsRemaining = month <= 2 ? 3 - month : 15 - month
+
+  // Get pro-rata subscription from stored rates or calculate
+  let proRataSubscription
+  if (category.proRataRates?.[monthKey] !== undefined) {
+    proRataSubscription = category.proRataRates[monthKey]
+  } else {
+    proRataSubscription = calculateDefaultProRataRate(category.annualFee, month)
+  }
+
+  // Check if joining fee applies this month
+  let joiningFee = 0
+  if (category.joiningFee > 0) {
+    if (category.joiningFeeMonths?.length > 0) {
+      // Only apply if current month is in the list
+      joiningFee = category.joiningFeeMonths.includes(month) ? category.joiningFee : 0
+    } else {
+      // No month restrictions = applies year-round
+      joiningFee = category.joiningFee
+    }
+  }
+
+  return {
+    proRataSubscription,
+    joiningFee,
+    total: proRataSubscription + joiningFee,
+    monthsRemaining,
+    currentMonth: month
+  }
+}
+
+/**
+ * Find suggested category by age from loaded categories array
+ * Synchronous version for use in forms
+ * @param {Array} categories - Array of loaded category objects
+ * @param {number} age - Applicant's age
+ * @returns {Object|null} Suggested category or null
+ */
+export const findCategoryByAge = (categories, age) => {
+  if (!categories || !Array.isArray(categories) || age === null || age === undefined) {
+    return null
+  }
+
+  // Find first non-special category matching age range
+  return categories.find(cat =>
+    !cat.isSpecial &&
+    age >= cat.ageMin &&
+    age <= cat.ageMax
+  ) || null
+}
+
+/**
  * Calculate pro-rata subscription for new members
+ * Uses stored rates if available, falls back to formula
  * @param {string} categoryId - Category ID
  * @param {string} joiningDate - Joining date
- * @returns {number} Calculated fee
+ * @returns {number} Calculated fee (subscription + joining fee)
  */
 export const calculateProRataFee = async (categoryId, joiningDate) => {
   try {
@@ -384,28 +543,18 @@ export const calculateProRataFee = async (categoryId, joiningDate) => {
     if (!category) return 0
 
     const month = new Date(joiningDate).getMonth() + 1 // 1-12
+    const monthKey = String(month)
 
-    // January/February: joining fee only, no subscription
-    if (month === 1 || month === 2) {
-      return category.joiningFee
+    // Lookup rate from stored proRataRates, fallback to formula
+    let proRataSubscription
+    if (category.proRataRates?.[monthKey] !== undefined) {
+      proRataSubscription = category.proRataRates[monthKey]
+    } else {
+      proRataSubscription = calculateDefaultProRataRate(category.annualFee, month)
     }
 
-    // August to December: calculate pro-rata
-    if (month >= 8 && month <= 12) {
-      const monthsRemaining = 13 - month
-      const proRataSubscription = Math.round((monthsRemaining / 12) * category.annualFee)
-
-      // Check if joining fee applies for this month
-      let joiningFee = category.joiningFee
-      if (category.joiningFeeMonths && category.joiningFeeMonths.includes(month)) {
-        joiningFee = category.joiningFee
-      }
-
-      return proRataSubscription + joiningFee
-    }
-
-    // Other months (March-July): Full year subscription + joining fee
-    return category.annualFee + category.joiningFee
+    // Add flat joining fee
+    return proRataSubscription + (category.joiningFee || 0)
   } catch (error) {
     console.error('Error calculating pro-rata fee:', error)
     return 0

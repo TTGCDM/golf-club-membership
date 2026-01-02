@@ -21,7 +21,11 @@ STEPS:
    - docs/SESSION_HANDOFF.md
    - CLAUDE.md (check it contains "Fine-Tuning Rules")
 
-2. Read and parse claude-progress.json, verify it has:
+2. Check for plans in ~/.claude/plans directory (user home):
+   - List all .md files in ~/.claude/plans (if directory exists)
+   - For each plan found, note its filename and check for a "Status:" line
+
+3. Read and parse claude-progress.json, verify it has:
    - phase field (should be "fine-tuning")
    - version field
    - features array
@@ -29,15 +33,17 @@ STEPS:
    - known_issues array
    - session_log array (at least one entry)
 
-3. From known_issues: list any where status != "resolved", group by severity
+4. From known_issues: list any where status != "resolved", group by severity
 
-4. From backlog: list open items by priority
+5. From backlog: list open items by priority
 
-5. Check last session_log entry - what were the next_steps?
+6. Check last session_log entry - what were the next_steps?
 
 RETURN THIS FORMAT:
 FILES_VALID: true/false
 FILES_ISSUES: [list if any]
+PLANS_FOUND: [count] plans in ~/.claude/plans
+PLANS_LIST: [filename: status] for each plan
 PHASE: [value]
 VERSION: [value]
 OPEN_ISSUES: [count] - [severity: description]
@@ -122,6 +128,9 @@ Aggregate the 3 agent results into this final report:
 - claude-progress.json: [from Agent 1]
 - SESSION_HANDOFF.md: [from Agent 1]
 - CLAUDE.md Fine-Tuning Rules: [from Agent 1]
+
+### Plans (~/.claude/plans)
+[from Agent 1 - list each plan with its status, or "No plans found"]
 
 ### Quality Gate
 | Check | Status | Details |

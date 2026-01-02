@@ -86,11 +86,11 @@ const VerifyEmail = () => {
   // Verifying state
   if (status === 'verifying') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-club-navy to-club-navy-dark">
         <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-ocean-teal mx-auto mb-4"></div>
-            <h1 className="text-2xl font-bold text-ocean-navy mb-2">Verifying Email</h1>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-club-navy mx-auto mb-4"></div>
+            <h1 className="text-2xl font-bold text-club-navy mb-2">Verifying Email</h1>
             <p className="text-gray-600">Please wait while we verify your email address...</p>
           </div>
         </div>
@@ -101,13 +101,13 @@ const VerifyEmail = () => {
   // Success state
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-club-navy to-club-navy-dark">
         <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
           <div className="text-center">
             {/* Success Icon */}
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-success/20 mb-4">
               <svg
-                className="h-10 w-10 text-green-600"
+                className="h-10 w-10 text-success"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -121,30 +121,30 @@ const VerifyEmail = () => {
               </svg>
             </div>
 
-            <h1 className="text-2xl font-bold text-ocean-navy mb-4">Email Verified!</h1>
+            <h1 className="text-2xl font-bold text-club-navy mb-4">Email Verified!</h1>
 
             <p className="text-gray-700 mb-6">
               Thank you for verifying your email address. Your membership application has been successfully submitted
               and is now awaiting review by our membership committee.
             </p>
 
-            <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-lg p-4 mb-6">
-              <h2 className="font-semibold text-ocean-navy mb-2">What happens next?</h2>
+            <div className="bg-club-tan-light bg-opacity-20 border border-club-navy rounded-lg p-4 mb-6">
+              <h2 className="font-semibold text-club-navy mb-2">What happens next?</h2>
               <ul className="text-sm text-gray-700 text-left space-y-2">
                 <li className="flex items-start">
-                  <svg className="h-5 w-5 text-ocean-teal mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5 text-club-navy mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>Your application will be reviewed by the membership committee</span>
                 </li>
                 <li className="flex items-start">
-                  <svg className="h-5 w-5 text-ocean-teal mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5 text-club-navy mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>We will contact you via email or phone regarding the status of your application</span>
                 </li>
                 <li className="flex items-start">
-                  <svg className="h-5 w-5 text-ocean-teal mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5 text-club-navy mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>If approved, you will receive further information about membership fees and next steps</span>
@@ -160,13 +160,17 @@ const VerifyEmail = () => {
             </div>
 
             <button
-              onClick={() => window.close()}
-              className="inline-block px-6 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy transition-colors cursor-pointer"
+              onClick={() => {
+                window.close()
+                // If window.close() doesn't work (tab not opened by script),
+                // the button will remain visible - user can close manually
+              }}
+              className="inline-block px-6 py-3 bg-club-navy text-white rounded-md hover:bg-club-navy-dark transition-colors cursor-pointer"
             >
               Close Tab
             </button>
             <p className="text-sm text-gray-500 mt-4">
-              You can now close this window and return to your email
+              You can now close this tab and return to your email
             </p>
           </div>
         </div>
@@ -177,7 +181,7 @@ const VerifyEmail = () => {
   // Expired state
   if (status === 'expired') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-club-navy to-club-navy-dark">
         <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
           <div className="text-center">
             {/* Warning Icon */}
@@ -197,13 +201,13 @@ const VerifyEmail = () => {
               </svg>
             </div>
 
-            <h1 className="text-2xl font-bold text-ocean-navy mb-4">Link Expired</h1>
+            <h1 className="text-2xl font-bold text-club-navy mb-4">Link Expired</h1>
 
             <p className="text-gray-700 mb-6">{errorMessage}</p>
 
             {resendSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <p className="text-green-800 font-medium">
+              <div className="bg-success/10 border border-success/30 rounded-lg p-4 mb-6">
+                <p className="text-success font-medium">
                   A new verification email has been sent! Please check your inbox and spam folder.
                 </p>
               </div>
@@ -218,14 +222,14 @@ const VerifyEmail = () => {
             <button
               onClick={handleResendEmail}
               disabled={isResending || resendSuccess}
-              className="w-full px-6 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+              className="w-full px-6 py-3 bg-club-navy text-white rounded-md hover:bg-club-navy-dark disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             >
               {isResending ? 'Sending...' : resendSuccess ? 'Email Sent!' : 'Resend Verification Email'}
             </button>
 
             <Link
               to="/"
-              className="inline-block text-ocean-teal hover:text-ocean-navy"
+              className="inline-block text-club-navy hover:text-club-navy"
             >
               Return to Home
             </Link>
@@ -237,7 +241,7 @@ const VerifyEmail = () => {
 
   // Error state
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-club-navy to-club-navy-dark">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center">
           {/* Error Icon */}
@@ -257,7 +261,7 @@ const VerifyEmail = () => {
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-ocean-navy mb-4">Verification Failed</h1>
+          <h1 className="text-2xl font-bold text-club-navy mb-4">Verification Failed</h1>
 
           <p className="text-gray-700 mb-6">{errorMessage}</p>
 
@@ -276,7 +280,7 @@ const VerifyEmail = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/apply"
-              className="px-6 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
+              className="px-6 py-3 bg-club-navy text-white rounded-md hover:bg-club-navy-dark"
             >
               Submit New Application
             </Link>

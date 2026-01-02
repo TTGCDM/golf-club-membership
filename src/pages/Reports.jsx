@@ -295,7 +295,7 @@ const Reports = () => {
           id="year"
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {[2024, 2025, 2026].map(year => (
             <option key={year} value={year}>{year}</option>
@@ -321,7 +321,7 @@ const Reports = () => {
 
         <div className="bg-white shadow rounded-lg p-6">
           <p className="text-sm font-medium text-gray-600">Payments Received ({selectedYear})</p>
-          <p className="text-3xl font-bold text-ocean-teal mt-2">
+          <p className="text-3xl font-bold text-primary mt-2">
             ${(paymentStats?.totalAmount || 0).toFixed(2)}
           </p>
           <p className="text-sm text-gray-500 mt-1">{paymentStats?.totalCount || 0} payments</p>
@@ -357,7 +357,7 @@ const Reports = () => {
               id="reportType"
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="outstanding">Outstanding Payments</option>
               <option value="all-members">All Members</option>
@@ -375,7 +375,7 @@ const Reports = () => {
               id="exportFormat"
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="csv">CSV (Excel Compatible)</option>
               <option value="pdf">PDF Document</option>
@@ -390,7 +390,7 @@ const Reports = () => {
             <button
               onClick={generateReport}
               disabled={isGenerating}
-              className="w-full px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isGenerating ? (
                 <>

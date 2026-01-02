@@ -354,7 +354,7 @@ const MemberForm = ({ member, onSubmit, onCancel, isLoading }) => {
         <button
           type="submit"
           disabled={isLoading}
-          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
+          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
           {isLoading ? 'Saving...' : member ? 'Update Member' : 'Add Member'}
         </button>

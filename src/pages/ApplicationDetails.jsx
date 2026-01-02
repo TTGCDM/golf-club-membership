@@ -9,6 +9,7 @@ import {
   APPLICATION_STATUS
 } from '../services/applicationsService'
 import { generateApplicationPDF } from '../services/applicationPDFService'
+import PageBreadcrumb from '../components/PageBreadcrumb'
 
 const ApplicationDetails = () => {
   const { id } = useParams()
@@ -117,8 +118,8 @@ const ApplicationDetails = () => {
         label: 'Email Verified'
       },
       [APPLICATION_STATUS.APPROVED]: {
-        bgColor: 'bg-ocean-seafoam bg-opacity-30',
-        textColor: 'text-ocean-teal',
+        bgColor: 'bg-club-tan-light bg-opacity-30',
+        textColor: 'text-club-navy',
         label: 'Approved'
       },
       [APPLICATION_STATUS.REJECTED]: {
@@ -150,7 +151,7 @@ const ApplicationDetails = () => {
     return (
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Application Not Found</h1>
-        <Link to="/applications" className="text-ocean-teal hover:text-ocean-navy">
+        <Link to="/applications" className="text-club-navy hover:text-club-navy-dark">
           Back to Applications
         </Link>
       </div>
@@ -161,11 +162,15 @@ const ApplicationDetails = () => {
 
   return (
     <div>
+      <PageBreadcrumb
+        items={[
+          { label: 'Applications', href: '/applications' },
+          { label: application.fullName || 'Application Details' }
+        ]}
+      />
+
       {/* Header */}
       <div className="mb-6">
-        <Link to="/applications" className="text-ocean-teal hover:text-ocean-navy mb-4 inline-block">
-          &larr; Back to Applications
-        </Link>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{application.fullName}</h1>
@@ -179,7 +184,7 @@ const ApplicationDetails = () => {
 
       {/* Success/Error Messages */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-6">
+        <div className="bg-success/10 border border-success/30 text-success px-4 py-3 rounded mb-6">
           {successMessage}
         </div>
       )}
@@ -195,7 +200,7 @@ const ApplicationDetails = () => {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleGeneratePDF}
-            className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy"
+            className="px-4 py-2 bg-club-navy text-white rounded-md hover:bg-club-navy-dark"
           >
             Generate PDF
           </button>
@@ -203,7 +208,7 @@ const ApplicationDetails = () => {
             <>
               <button
                 onClick={() => setShowApproveModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90"
               >
                 Approve Application
               </button>
@@ -218,7 +223,7 @@ const ApplicationDetails = () => {
           {application.status === APPLICATION_STATUS.APPROVED && application.memberId && (
             <Link
               to={`/members/${application.memberId}`}
-              className="px-4 py-2 bg-ocean-navy text-white rounded-md hover:bg-ocean-teal"
+              className="px-4 py-2 bg-club-navy-dark text-white rounded-md hover:bg-club-navy"
             >
               View Member Profile
             </Link>
@@ -248,7 +253,7 @@ const ApplicationDetails = () => {
           )}
           {application.status === APPLICATION_STATUS.APPROVED && application.approvedAt && (
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-green-400"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-success"></div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-900">Application Approved</p>
                 <p className="text-sm text-gray-600">{formatDateTime(application.approvedAt)}</p>
@@ -426,7 +431,7 @@ const ApplicationDetails = () => {
               <button
                 onClick={handleApprove}
                 disabled={approveMutation.isLoading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90 disabled:opacity-50"
               >
                 {approveMutation.isLoading ? 'Approving...' : 'Approve'}
               </button>
@@ -448,7 +453,7 @@ const ApplicationDetails = () => {
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Enter rejection reason..."
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mb-4"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mb-4"
             />
             <div className="flex justify-end gap-3">
               <button

@@ -35,10 +35,11 @@ const FeeApplication = () => {
       const cats = await getAllCategories()
       setCategories(cats)
 
-      // Initialize category fees with default values
+      // Initialize category fees with March rate from proRataRates (or fallback to annualFee)
       const defaultOverrides = {}
       cats.forEach(cat => {
-        defaultOverrides[cat.id] = String(cat.annualFee)
+        const marchRate = cat.proRataRates?.["3"] ?? cat.annualFee
+        defaultOverrides[cat.id] = String(marchRate)
       })
       setValue('categoryOverrides', defaultOverrides)
     } catch (err) {
@@ -70,7 +71,8 @@ const FeeApplication = () => {
       // Convert overrides to number format for service
       const categoryFees = {}
       categories.forEach(cat => {
-        categoryFees[cat.id] = categoryOverrides[cat.id] ?? cat.annualFee
+        const marchRate = cat.proRataRates?.["3"] ?? cat.annualFee
+        categoryFees[cat.id] = categoryOverrides[cat.id] ?? marchRate
       })
 
       const previewData = await previewFeeApplication(feeYear, categoryFees)
@@ -99,7 +101,8 @@ const FeeApplication = () => {
     // Convert overrides to number format for service
     const categoryFees = {}
     categories.forEach(cat => {
-      categoryFees[cat.id] = categoryOverrides[cat.id] ?? cat.annualFee
+      const marchRate = cat.proRataRates?.["3"] ?? cat.annualFee
+      categoryFees[cat.id] = categoryOverrides[cat.id] ?? marchRate
     })
 
     const confirmed = window.confirm(
@@ -134,21 +137,12 @@ const FeeApplication = () => {
     }
   }
 
-  const resetToDefaults = () => {
-    const defaultOverrides = {}
-    categories.forEach(cat => {
-      defaultOverrides[cat.id] = String(cat.annualFee)
-    })
-    setValue('categoryOverrides', defaultOverrides)
-    setPreview(null)
-  }
-
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Apply Annual Membership Fees</h3>
         <p className="text-sm text-gray-600">
-          Apply membership fees for a specific year to all active members. Fees will be deducted from member balances.
+          Apply annual fees to all active members. Default fees are pulled from the March rate in the pro-rata rate table (set in Membership Categories). You can override fees per category below before applying. Use <span className="font-medium">Refresh Rates</span> to reload the latest rates from the rate table.
         </p>
       </div>
 
@@ -159,8 +153,8 @@ const FeeApplication = () => {
       )}
 
       {success && (
-        <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md p-4">
-          <p className="text-ocean-teal text-sm">{success}</p>
+        <div className="bg-secondary/20 border border-primary rounded-md p-4">
+          <p className="text-primary text-sm">{success}</p>
         </div>
       )}
 
@@ -185,10 +179,17 @@ const FeeApplication = () => {
         </FormField>
         <button
           type="button"
-          onClick={resetToDefaults}
-          className="text-sm text-ocean-teal hover:text-ocean-navy"
+          onClick={() => {
+            loadCategories()
+            setPreview(null)
+            setSuccess('Rates refreshed from rate table')
+          }}
+          className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
         >
-          Reset to Default Fees
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh Rates
         </button>
       </div>
 
@@ -201,7 +202,7 @@ const FeeApplication = () => {
                 Category
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Default Annual Fee
+                Rate Table (March)
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Fee to Apply
@@ -209,10 +210,12 @@ const FeeApplication = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {categories.map(cat => (
+            {categories.map(cat => {
+              const marchRate = cat.proRataRates?.["3"] ?? cat.annualFee
+              return (
               <tr key={cat.id}>
                 <td className="px-4 py-3 text-sm text-gray-900">{cat.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">${cat.annualFee.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm text-gray-500">${marchRate.toFixed(2)}</td>
                 <td className="px-4 py-3">
                   <input
                     type="number"
@@ -220,11 +223,11 @@ const FeeApplication = () => {
                     step="0.01"
                     {...register(`categoryOverrides.${cat.id}`)}
                     onChange={(e) => handleFeeChange(cat.id, e.target.value)}
-                    className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -241,7 +244,7 @@ const FeeApplication = () => {
         <button
           onClick={handleApply}
           disabled={isLoading || !preview || preview.totalMembers === 0}
-          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Apply Fees to Members
         </button>
@@ -307,9 +310,9 @@ const FeeApplication = () => {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
               {/* Summary */}
               <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-green-700">Successful</p>
-                  <p className="text-2xl font-bold text-green-900">{results.successful}</p>
+                <div className="bg-success/10 p-4 rounded-lg">
+                  <p className="text-sm text-success/90">Successful</p>
+                  <p className="text-2xl font-bold text-success">{results.successful}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-700">Skipped</p>
@@ -346,7 +349,7 @@ const FeeApplication = () => {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {detail.status === 'success' && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            <span className="px-2 py-1 bg-success/20 text-success rounded-full text-xs font-medium">
                               Success
                             </span>
                           )}

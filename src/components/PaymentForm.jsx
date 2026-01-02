@@ -137,7 +137,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
                 placeholder="Search by name, email, or Golf Australia ID..."
                 disabled={!!payment || !!preSelectedMember}
                 autoComplete="off"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal disabled:bg-gray-50 disabled:cursor-not-allowed ${
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy disabled:bg-gray-50 disabled:cursor-not-allowed ${
                   errors.memberId ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -152,7 +152,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
                   <div
                     key={member.id}
                     onClick={() => handleMemberSelect(member)}
-                    className="px-3 py-2 hover:bg-ocean-seafoam bg-opacity-20 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    className="px-3 py-2 hover:bg-club-tan-light bg-opacity-20 cursor-pointer border-b border-gray-100 last:border-b-0"
                   >
                     <div className="font-medium text-gray-900">{member.fullName}</div>
                     <div className="text-sm text-gray-500">
@@ -167,7 +167,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
               </div>
             )}
             {selectedMember && (
-              <div className="mt-2 p-3 bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-md">
+              <div className="mt-2 p-3 bg-club-tan-light bg-opacity-20 border border-club-navy rounded-md">
                 <p className="text-sm text-gray-700">
                   <span className="font-medium">Selected:</span> {selectedMember.fullName}
                   {selectedMember.accountBalance !== undefined && (
@@ -252,7 +252,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
                 id="notes"
                 rows="3"
                 placeholder="Optional notes or comments"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mt-1"
                 {...register('notes')}
               />
             </FormField>
@@ -281,7 +281,7 @@ const PaymentForm = ({ payment, onSubmit, onCancel, isLoading, preSelectedMember
         <button
           type="submit"
           disabled={isLoading || !watchMemberId}
-          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50"
+          className="px-4 py-2 bg-club-navy text-white rounded-md hover:bg-club-navy-dark disabled:opacity-50"
         >
           {isLoading ? 'Processing...' : payment ? 'Update Payment' : 'Record Payment'}
         </button>

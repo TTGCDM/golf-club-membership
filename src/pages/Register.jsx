@@ -51,18 +51,18 @@ const Register = () => {
               Registration Successful!
             </h2>
           </div>
-          <div className="rounded-md bg-ocean-seafoam bg-opacity-20 p-4 border border-ocean-teal">
+          <div className="rounded-md bg-club-tan-light bg-opacity-20 p-4 border border-club-navy">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-ocean-teal" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-club-navy" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-ocean-teal">
+                <h3 className="text-sm font-medium text-club-navy">
                   Account created successfully
                 </h3>
-                <div className="mt-2 text-sm text-ocean-teal">
+                <div className="mt-2 text-sm text-club-navy">
                   <p>
                     Your account has been created and is pending approval by an administrator.
                     You will be able to log in once your account has been approved.
@@ -77,7 +77,7 @@ const Register = () => {
           <div className="text-center">
             <Link
               to="/login"
-              className="font-medium text-ocean-teal hover:text-ocean-navy"
+              className="font-medium text-club-navy hover:text-club-navy-dark"
             >
               Return to Login
             </Link>
@@ -156,7 +156,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-ocean-teal hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-club-navy hover:bg-club-navy-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-club-navy disabled:opacity-50"
             >
               {isSubmitting ? 'Creating account...' : 'Register'}
             </button>
@@ -164,7 +164,7 @@ const Register = () => {
 
           <div className="text-center text-sm">
             <span className="text-gray-600">Already have an account? </span>
-            <Link to="/login" className="font-medium text-ocean-teal hover:text-ocean-navy">
+            <Link to="/login" className="font-medium text-club-navy hover:text-club-navy-dark">
               Sign in
             </Link>
           </div>

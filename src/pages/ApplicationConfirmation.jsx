@@ -53,13 +53,13 @@ const ApplicationConfirmation = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-teal to-ocean-navy py-8 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-club-navy-dark py-8 px-4">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           {/* Success Icon */}
-          <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-success/20 mb-4">
             <svg
-              className="h-12 w-12 text-green-600"
+              className="h-12 w-12 text-success"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -73,7 +73,7 @@ const ApplicationConfirmation = () => {
             </svg>
           </div>
 
-          <h1 className="text-3xl font-bold text-ocean-navy mb-2">
+          <h1 className="text-3xl font-bold text-primary mb-2">
             Application Submitted!
           </h1>
           <p className="text-gray-600">
@@ -82,8 +82,8 @@ const ApplicationConfirmation = () => {
         </div>
 
         {/* Application Details */}
-        <div className="bg-ocean-seafoam bg-opacity-20 border border-ocean-teal rounded-lg p-6 mb-6">
-          <h2 className="font-semibold text-ocean-navy mb-3">Application Details</h2>
+        <div className="bg-secondary/20 border border-primary rounded-lg p-6 mb-6">
+          <h2 className="font-semibold text-primary mb-3">Application Details</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Application ID:</span>
@@ -103,14 +103,14 @@ const ApplicationConfirmation = () => {
         {/* Next Steps */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-5 w-5 text-ocean-teal mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="h-5 w-5 text-primary mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             Next Steps
           </h2>
           <ol className="space-y-3 text-gray-700">
             <li className="flex items-start">
-              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-ocean-teal text-white flex items-center justify-center text-sm font-medium mr-3">
+              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium mr-3">
                 1
               </span>
               <div>
@@ -121,7 +121,7 @@ const ApplicationConfirmation = () => {
               </div>
             </li>
             <li className="flex items-start">
-              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-ocean-teal text-white flex items-center justify-center text-sm font-medium mr-3">
+              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium mr-3">
                 2
               </span>
               <div>
@@ -132,7 +132,7 @@ const ApplicationConfirmation = () => {
               </div>
             </li>
             <li className="flex items-start">
-              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-ocean-teal text-white flex items-center justify-center text-sm font-medium mr-3">
+              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium mr-3">
                 3
               </span>
               <div>
@@ -153,8 +153,8 @@ const ApplicationConfirmation = () => {
           </p>
 
           {resendSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-              <p className="text-green-800 font-medium text-sm">
+            <div className="bg-success/10 border border-success/30 rounded-lg p-4 mb-4">
+              <p className="text-success font-medium text-sm">
                 Verification email sent successfully! Please check your inbox.
               </p>
             </div>
@@ -169,7 +169,7 @@ const ApplicationConfirmation = () => {
           <button
             onClick={handleResendEmail}
             disabled={isResending || resendSuccess}
-            className="w-full sm:w-auto px-6 py-2 bg-white border border-ocean-teal text-ocean-teal rounded-md hover:bg-ocean-seafoam hover:bg-opacity-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full sm:w-auto px-6 py-2 bg-white border border-primary text-primary rounded-md hover:bg-secondary/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isResending ? 'Sending...' : resendSuccess ? 'Email Sent!' : 'Resend Verification Email'}
           </button>
@@ -204,7 +204,7 @@ const ApplicationConfirmation = () => {
         <div className="flex justify-center">
           <Link
             to="/"
-            className="px-8 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy transition-colors"
+            className="px-8 py-3 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
           >
             Close
           </Link>

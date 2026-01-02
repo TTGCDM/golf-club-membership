@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import PageBreadcrumb from '../components/PageBreadcrumb'
 
 const MemberDetail = () => {
   const { checkPermission, ROLES, currentUser } = useAuth()
@@ -239,7 +240,7 @@ const MemberDetail = () => {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <p className="text-red-800">{memberError?.message || 'Member not found'}</p>
         </div>
-        <Link to="/members" className="text-ocean-teal hover:text-ocean-navy mt-4 inline-block">
+        <Link to="/members" className="text-club-navy hover:text-club-navy-dark mt-4 inline-block">
           Back to Members
         </Link>
       </div>
@@ -249,13 +250,20 @@ const MemberDetail = () => {
   const age = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
 
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-ocean-teal'
+    if (balance > 0) return 'text-club-navy'
     if (balance < 0) return 'text-red-600'
     return 'text-gray-900'
   }
 
   return (
     <div>
+      <PageBreadcrumb
+        items={[
+          { label: 'Members', href: '/members' },
+          { label: member.fullName }
+        ]}
+      />
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -390,7 +398,7 @@ const MemberDetail = () => {
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
                 <dd className="mt-1">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active'
-                    ? 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
+                    ? 'bg-club-tan-light bg-opacity-30 text-club-navy'
                     : 'bg-gray-100 text-gray-800'
                     }`}>
                     {member.status}
@@ -443,7 +451,7 @@ const MemberDetail = () => {
                         <tr key={`${transaction.type}-${transaction.id || index}`}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
                             {transaction.type === 'payment' ? (
-                              <span className="px-2 py-1 bg-ocean-seafoam bg-opacity-30 text-ocean-teal rounded-full text-xs font-medium">
+                              <span className="px-2 py-1 bg-club-tan-light bg-opacity-30 text-club-navy rounded-full text-xs font-medium">
                                 Payment
                               </span>
                             ) : (
@@ -462,7 +470,7 @@ const MemberDetail = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                             {transaction.type === 'payment' ? (
-                              <span className="text-ocean-teal">+${transaction.amount.toFixed(2)}</span>
+                              <span className="text-club-navy">+${transaction.amount.toFixed(2)}</span>
                             ) : (
                               <span className="text-red-600">-${transaction.amount.toFixed(2)}</span>
                             )}
@@ -494,7 +502,7 @@ const MemberDetail = () => {
                       <p className="text-sm text-gray-600">
                         Payments: <span className="font-medium">{payments.length}</span>
                       </p>
-                      <p className="text-sm text-ocean-teal">
+                      <p className="text-sm text-club-navy">
                         Total: <span className="font-medium">
                           +${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                         </span>
@@ -530,7 +538,7 @@ const MemberDetail = () => {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a note about this member..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal text-sm resize-none"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-club-navy focus:border-club-navy text-sm resize-none"
                     rows={2}
                   />
                   <Button
@@ -553,7 +561,7 @@ const MemberDetail = () => {
                 {member.comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className="border-l-4 border-ocean-teal pl-4 py-2 bg-gray-50 rounded-r"
+                    className="border-l-4 border-club-navy pl-4 py-2 bg-gray-50 rounded-r"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

@@ -1,6 +1,6 @@
 {
   "phase": "fine-tuning",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "metrics_history": [
     {
       "date": "2025-12-12",
@@ -196,12 +196,17 @@
   ],
   "backlog": [
     {
-      "id": "BL-010",
-      "priority": "low",
+      "id": "BL-011",
+      "priority": "medium",
       "status": "pending",
-      "title": "Display version number in application banner",
-      "description": "Add the current version number to the application header/banner for easy identification of deployed version.",
-      "source_session": "2025-12-13-deployment"
+      "title": "Add membership fee estimation to admin AddApplication page",
+      "description": "Port the membership fee estimation functionality from the public application form (ApplyForMembership.jsx) to the admin AddApplication page (/applications/add). This includes the MembershipCostCalculator component showing pro-rata fees, joining fees, and total estimated cost based on selected membership category.",
+      "source_session": "2025-12-16-data-alignment",
+      "related_files": [
+        "src/pages/AddApplication.jsx",
+        "src/pages/ApplyForMembership.jsx",
+        "src/components/MembershipCostCalculator.jsx"
+      ]
     },
     {
       "id": "BL-005",
@@ -218,6 +223,13 @@
     }
   ],
   "backlog_completed": [
+    {
+      "id": "BL-010",
+      "priority": "low",
+      "title": "Display version number in application banner",
+      "completed_session": "2025-12-16-data-alignment",
+      "resolution": "Added version number (v2.2.0) to Layout.jsx header next to 'Tea Tree Golf Club' title"
+    },
     {
       "id": "BL-001",
       "priority": "low",

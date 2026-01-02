@@ -60,9 +60,39 @@
       "WebFetch(domain:www.npmjs.com)",
       "Bash(claude mcp add:*)",
       "Bash(claude mcp list:*)",
-      "Bash(claude mcp remove:*)"
+      "Bash(claude mcp remove:*)",
+      "Bash(ls:*)",
+      "Bash(del /c/Users/user/golfixtures/nul)",
+      "Bash(npm version:*)",
+      "Bash(git tag:*)",
+      "Bash(node -p:*)",
+      "mcp__chrome-devtools__select_page",
+      "mcp__chrome-devtools__handle_dialog",
+      "Bash(package.json )",
+      "Bash(package-lock.json )",
+      "Bash(src/components/Layout.jsx )",
+      "Bash(src/components/MemberForm.jsx )",
+      "Bash(src/pages/ApplicationDetails.jsx )",
+      "Bash(src/pages/MemberDetail.jsx )",
+      "Bash(src/schemas/application.js )",
+      "Bash(src/schemas/member.js )",
+      "Bash(src/services/applicationsService.js )",
+      "Bash(src/services/membersService.js )",
+      "Bash(src/services/membersService.test.js)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "WebFetch(domain:originui.com)",
+      "WebFetch(domain:coss.com)",
+      "Bash(npx shadcn@latest add:*)",
+      "mcp__chrome-devtools__press_key",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(del /c/Users/user/testproject/nul)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7"
+  ]
 }

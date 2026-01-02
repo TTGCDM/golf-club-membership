@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,13 +15,13 @@ const SortIcon = ({ column, sortColumn, sortDirection }) => {
   }
   if (sortDirection === 'asc') {
     return (
-      <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 text-club-navy ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
       </svg>
     )
   }
   return (
-    <svg className="w-4 h-4 text-ocean-teal ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-club-navy ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   )
@@ -30,7 +30,6 @@ const SortIcon = ({ column, sortColumn, sortDirection }) => {
 const Applications = () => {
   const { checkPermission, ROLES } = useAuth()
   const queryClient = useQueryClient()
-  const [filteredApplications, setFilteredApplications] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortColumn, setSortColumn] = useState('submittedAt')
@@ -53,28 +52,26 @@ const Applications = () => {
     }
   })
 
-  useEffect(() => {
-    const applyFilters = () => {
-      let filtered = [...applications]
+  // Derive filtered applications using useMemo (not useEffect + useState)
+  // This avoids infinite loops from array reference changes
+  const filteredApplications = useMemo(() => {
+    let filtered = [...applications]
 
-      // Apply search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase()
-        filtered = filtered.filter(app =>
-          app.fullName?.toLowerCase().includes(searchLower) ||
-          app.email?.toLowerCase().includes(searchLower)
-        )
-      }
-
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        filtered = filtered.filter(app => app.status === statusFilter)
-      }
-
-      setFilteredApplications(filtered)
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(app =>
+        app.fullName?.toLowerCase().includes(searchLower) ||
+        app.email?.toLowerCase().includes(searchLower)
+      )
     }
 
-    applyFilters()
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(app => app.status === statusFilter)
+    }
+
+    return filtered
   }, [applications, searchTerm, statusFilter])
 
   // Check permission
@@ -136,8 +133,8 @@ const Applications = () => {
         label: 'Email Verified'
       },
       [APPLICATION_STATUS.APPROVED]: {
-        bgColor: 'bg-ocean-seafoam bg-opacity-30',
-        textColor: 'text-ocean-teal',
+        bgColor: 'bg-club-tan-light bg-opacity-30',
+        textColor: 'text-club-navy',
         label: 'Approved'
       },
       [APPLICATION_STATUS.REJECTED]: {
@@ -184,7 +181,7 @@ const Applications = () => {
         </div>
         <Link
           to="/applications/add"
-          className="px-4 py-2 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy transition-colors"
+          className="px-4 py-2 bg-club-navy text-white rounded-md hover:bg-club-navy-dark transition-colors"
         >
           Add Application (Admin)
         </Link>
@@ -203,7 +200,7 @@ const Applications = () => {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy"
             />
           </div>
 
@@ -215,7 +212,7 @@ const Applications = () => {
               id="status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy"
             >
               <option value="all">All Status</option>
               <option value={APPLICATION_STATUS.SUBMITTED}>Submitted</option>
@@ -303,7 +300,7 @@ const Applications = () => {
                     <div className="flex items-center gap-3">
                       <Link
                         to={`/applications/${application.id}`}
-                        className="text-ocean-teal hover:text-ocean-navy"
+                        className="text-club-navy hover:text-club-navy-dark"
                       >
                         View
                       </Link>

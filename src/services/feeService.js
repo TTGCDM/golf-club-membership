@@ -67,10 +67,11 @@ export const previewFeeApplication = async (year, categoryFees = {}) => {
 
       if (!category) return // Skip if category not found
 
-      // Use override fee if provided, otherwise use category's annual fee
+      // Use override fee if provided, otherwise use March rate from proRataRates (or fallback to annualFee)
+      const marchRate = category.proRataRates?.["3"] ?? category.annualFee
       const feeAmount = categoryFees[categoryId] !== undefined
         ? categoryFees[categoryId]
-        : category.annualFee
+        : marchRate
 
       if (!breakdown[categoryId]) {
         breakdown[categoryId] = {
@@ -144,10 +145,11 @@ export const applyAnnualFees = async (year, categoryFees = {}, userId) => {
         continue
       }
 
-      // Use override fee if provided, otherwise use category's annual fee
+      // Use override fee if provided, otherwise use March rate from proRataRates (or fallback to annualFee)
+      const marchRate = category.proRataRates?.["3"] ?? category.annualFee
       const feeAmount = categoryFees[categoryId] !== undefined
         ? categoryFees[categoryId]
-        : category.annualFee
+        : marchRate
 
       try {
         // Use transaction to ensure atomicity

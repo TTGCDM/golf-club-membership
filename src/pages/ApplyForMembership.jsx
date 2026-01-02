@@ -1,17 +1,19 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import ReCAPTCHA from 'react-google-recaptcha'
-import { submitApplication, MEMBERSHIP_TYPES, AUSTRALIAN_STATES } from '../services/applicationsService'
+import { submitApplication, AUSTRALIAN_STATES } from '../services/applicationsService'
+import { getAllCategories, findCategoryByAge, calculateProRataFeeSync } from '../services/categoryService'
 import { generateVerificationToken, generateTokenExpiry, sendVerificationEmail } from '../services/emailVerificationService'
 import { RECAPTCHA_SITE_KEY } from '../config/recaptcha'
 import { applicationFormSchema, transformApplicationFormData } from '../schemas'
 import { FormField, FormInput, FormSelect } from '../components/form'
+import CategorySelector from '../components/CategorySelector'
+import MembershipCostCalculator from '../components/MembershipCostCalculator'
 import {
   formatAustralianPhone,
-  calculateAge,
-  getSuggestedMembershipType
+  calculateAge
 } from '../utils/validation'
 
 const ApplyForMembership = () => {
@@ -34,19 +36,14 @@ const ApplyForMembership = () => {
       state: 'TAS',
       postcode: '',
       email: '',
-      emailConfirm: '',
       phoneHome: '',
       phoneWork: '',
       phoneMobile: '',
       dateOfBirth: '',
-      occupation: '',
-      businessName: '',
-      businessAddress: '',
-      businessPostcode: '',
       previousClubs: '',
       golfLinkNumber: '',
       lastHandicap: '',
-      membershipType: '',
+      membershipCategoryId: '',
       agreedToTerms: false
     },
   })
@@ -56,11 +53,44 @@ const ApplyForMembership = () => {
   const [submitError, setSubmitError] = useState(null)
   const [captchaToken, setCaptchaToken] = useState(null)
 
-  /* eslint-disable react-hooks/incompatible-library -- watch() is intentionally reactive */
+  // Category state
+  const [categories, setCategories] = useState([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [suggestedCategoryId, setSuggestedCategoryId] = useState(null)
+
   const watchDateOfBirth = watch('dateOfBirth')
-  const watchMembershipType = watch('membershipType')
   const watchAgreedToTerms = watch('agreedToTerms')
-  /* eslint-enable react-hooks/incompatible-library */
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true)
+        setCategoriesError(null)
+        const cats = await getAllCategories()
+        setCategories(cats)
+      } catch (err) {
+        console.error('Error fetching categories:', err)
+        setCategoriesError('Unable to load membership categories. Please refresh the page.')
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // Update suggested category when DOB changes
+  useEffect(() => {
+    if (watchDateOfBirth && categories.length > 0) {
+      const age = calculateAge(watchDateOfBirth)
+      const suggested = findCategoryByAge(categories, age)
+      setSuggestedCategoryId(suggested?.id || null)
+    } else {
+      setSuggestedCategoryId(null)
+    }
+  }, [watchDateOfBirth, categories])
 
   // Handle phone field change with formatting
   const handlePhoneChange = (fieldName, value) => {
@@ -72,17 +102,16 @@ const ApplyForMembership = () => {
     setCaptchaToken(token)
   }
 
-  // Calculate age and suggest membership type when DOB changes
-  const getAgeAndSuggestion = () => {
-    if (!watchDateOfBirth) return null
-
-    const age = calculateAge(watchDateOfBirth)
-    const suggested = getSuggestedMembershipType(age)
-
-    return { age, suggested }
+  // Handle category selection
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category)
+    setValue('membershipCategoryId', category.id)
   }
 
-  const ageInfo = getAgeAndSuggestion()
+  // Calculate cost breakdown for current selection
+  const costBreakdown = selectedCategory
+    ? calculateProRataFeeSync(selectedCategory, new Date())
+    : null
 
   // Handle form submission
   const onFormSubmit = async (data) => {
@@ -102,7 +131,11 @@ const ApplyForMembership = () => {
       const tokenExpiry = generateTokenExpiry()
 
       // Transform and prepare application data
-      const transformedData = transformApplicationFormData(data)
+      const dataWithCategoryName = {
+        ...data,
+        membershipCategoryName: selectedCategory?.name || ''
+      }
+      const transformedData = transformApplicationFormData(dataWithCategoryName, costBreakdown)
       const applicationData = {
         ...transformedData,
         captchaScore: 1.0, // reCAPTCHA v2 checkbox is binary (completed = 1.0)
@@ -146,11 +179,11 @@ const ApplyForMembership = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ocean-teal to-ocean-navy py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-club-navy to-club-navy-dark py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-xl p-8 mb-6">
-          <h1 className="text-3xl font-bold text-ocean-navy mb-2">
+          <h1 className="text-3xl font-bold text-club-navy mb-2">
             Tea Tree Golf Club
           </h1>
           <h2 className="text-xl text-gray-700 mb-4">
@@ -209,6 +242,26 @@ const ApplyForMembership = () => {
                     placeholder="John Smith"
                     error={errors.fullName?.message}
                     {...register('fullName')}
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            {/* Date of Birth */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <div className="md:col-span-2">
+                <FormField
+                  label="Date of Birth"
+                  name="dateOfBirth"
+                  required
+                  error={errors.dateOfBirth?.message}
+                  helpText={watchDateOfBirth && !errors.dateOfBirth?.message ? `Age: ${calculateAge(watchDateOfBirth)} years` : undefined}
+                >
+                  <FormInput
+                    type="date"
+                    id="dateOfBirth"
+                    error={errors.dateOfBirth?.message}
+                    {...register('dateOfBirth')}
                   />
                 </FormField>
               </div>
@@ -312,35 +365,17 @@ const ApplyForMembership = () => {
                 />
               </FormField>
 
-              {/* Email Confirmation */}
-              <FormField
-                label="Confirm Email Address"
-                name="emailConfirm"
-                required
-                error={errors.emailConfirm?.message}
-              >
-                <FormInput
-                  type="email"
-                  id="emailConfirm"
-                  autoComplete="off"
-                  placeholder="john.smith@email.com"
-                  error={errors.emailConfirm?.message}
-                  {...register('emailConfirm')}
-                />
-              </FormField>
-
               {/* Mobile Phone */}
               <FormField
                 label="Mobile Phone"
                 name="phoneMobile"
-                required
                 error={errors.phoneMobile?.message}
               >
                 <input
                   type="tel"
                   id="phoneMobile"
                   placeholder="04XX XXX XXX"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mt-1 ${
                     errors.phoneMobile?.message ? 'border-red-500' : 'border-gray-300'
                   }`}
                   {...register('phoneMobile')}
@@ -358,7 +393,7 @@ const ApplyForMembership = () => {
                   type="tel"
                   id="phoneHome"
                   placeholder="03 XXXX XXXX"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mt-1 ${
                     errors.phoneHome?.message ? 'border-red-500' : 'border-gray-300'
                   }`}
                   {...register('phoneHome')}
@@ -377,91 +412,11 @@ const ApplyForMembership = () => {
                     type="tel"
                     id="phoneWork"
                     placeholder="03 XXXX XXXX"
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1 ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mt-1 ${
                       errors.phoneWork?.message ? 'border-red-500' : 'border-gray-300'
                     }`}
                     {...register('phoneWork')}
                     onChange={(e) => handlePhoneChange('phoneWork', e.target.value)}
-                  />
-                </FormField>
-              </div>
-            </div>
-          </div>
-
-          {/* Personal Details */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Details</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Date of Birth */}
-              <FormField
-                label="Date of Birth"
-                name="dateOfBirth"
-                required
-                error={errors.dateOfBirth?.message}
-                helpText={ageInfo && !errors.dateOfBirth?.message ? `Age: ${ageInfo.age} years (Suggested: ${ageInfo.suggested} membership)` : undefined}
-              >
-                <FormInput
-                  type="date"
-                  id="dateOfBirth"
-                  error={errors.dateOfBirth?.message}
-                  {...register('dateOfBirth')}
-                />
-              </FormField>
-
-              {/* Occupation */}
-              <FormField
-                label="Occupation"
-                name="occupation"
-              >
-                <FormInput
-                  type="text"
-                  id="occupation"
-                  placeholder="e.g., Accountant, Teacher, Retired"
-                  {...register('occupation')}
-                />
-              </FormField>
-
-              {/* Business Name */}
-              <FormField
-                label="Business Name"
-                name="businessName"
-              >
-                <FormInput
-                  type="text"
-                  id="businessName"
-                  placeholder="Optional"
-                  {...register('businessName')}
-                />
-              </FormField>
-
-              {/* Business Address */}
-              <FormField
-                label="Business Address"
-                name="businessAddress"
-              >
-                <FormInput
-                  type="text"
-                  id="businessAddress"
-                  placeholder="Optional"
-                  {...register('businessAddress')}
-                />
-              </FormField>
-
-              {/* Business Postcode */}
-              <div className="md:col-span-2">
-                <FormField
-                  label="Business Postcode"
-                  name="businessPostcode"
-                  error={errors.businessPostcode?.message}
-                >
-                  <FormInput
-                    type="text"
-                    id="businessPostcode"
-                    maxLength="4"
-                    placeholder="Optional"
-                    error={errors.businessPostcode?.message}
-                    {...register('businessPostcode')}
                   />
                 </FormField>
               </div>
@@ -485,7 +440,7 @@ const ApplyForMembership = () => {
                   <textarea
                     id="previousClubs"
                     rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-club-navy mt-1"
                     placeholder="List any golf clubs you have previously been a member of"
                     {...register('previousClubs')}
                   />
@@ -524,45 +479,53 @@ const ApplyForMembership = () => {
             </div>
           </div>
 
-          {/* Membership Type */}
+          {/* Membership Category */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Membership Type</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Membership Category</h3>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Select Membership Type *
-              </label>
-              <div className="space-y-3">
-                {Object.values(MEMBERSHIP_TYPES).map(type => (
-                  <label
-                    key={type}
-                    className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      watchMembershipType === type
-                        ? 'border-ocean-teal bg-ocean-seafoam bg-opacity-10'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      value={type}
-                      {...register('membershipType')}
-                      className="mt-1 mr-3 text-ocean-teal focus:ring-ocean-teal"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">{type}</div>
-                      <div className="text-sm text-gray-600">
-                        {type === 'Full' && 'Full playing rights, 7 days per week'}
-                        {type === 'Restricted' && 'Limited playing times (check with club)'}
-                        {type === 'Junior' && 'For members under 18 years of age'}
-                      </div>
-                    </div>
-                  </label>
-                ))}
+            {categoriesError ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800">{categoriesError}</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-2 text-yellow-700 underline hover:text-yellow-900"
+                >
+                  Refresh page
+                </button>
               </div>
-              {errors.membershipType?.message && (
-                <p className="text-red-600 text-sm mt-2">{errors.membershipType?.message}</p>
-              )}
-            </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Membership Category *
+                  </label>
+                  {suggestedCategoryId && !selectedCategory && (
+                    <p className="text-sm text-blue-600 mb-3">
+                      Based on your date of birth, we suggest a category below (highlighted).
+                    </p>
+                  )}
+                  <CategorySelector
+                    categories={categories}
+                    selectedCategoryId={selectedCategory?.id}
+                    onSelect={handleCategorySelect}
+                    suggestedCategoryId={suggestedCategoryId}
+                    error={errors.membershipCategoryId?.message}
+                    disabled={isSubmitting}
+                    loading={categoriesLoading}
+                  />
+                </div>
+
+                {/* Cost Calculator */}
+                {selectedCategory && (
+                  <MembershipCostCalculator
+                    category={selectedCategory}
+                    joiningDate={new Date()}
+                    className="mt-6"
+                  />
+                )}
+              </>
+            )}
           </div>
 
           {/* Terms and Agreement */}
@@ -574,7 +537,7 @@ const ApplyForMembership = () => {
                 <input
                   type="checkbox"
                   {...register('agreedToTerms')}
-                  className="mt-1 mr-3 h-4 w-4 text-ocean-teal focus:ring-ocean-teal border-gray-300 rounded"
+                  className="mt-1 mr-3 h-4 w-4 text-club-navy focus:ring-club-navy border-gray-300 rounded"
                 />
                 <span className="text-sm text-gray-700">
                   I confirm that the information provided above is true and accurate. I understand that my application
@@ -600,7 +563,7 @@ const ApplyForMembership = () => {
                   href="https://policies.google.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-ocean-teal hover:underline"
+                  className="text-club-navy hover:underline"
                 >
                   Privacy Policy
                 </a>{' '}
@@ -609,7 +572,7 @@ const ApplyForMembership = () => {
                   href="https://policies.google.com/terms"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-ocean-teal hover:underline"
+                  className="text-club-navy hover:underline"
                 >
                   Terms of Service
                 </a>{' '}
@@ -631,8 +594,8 @@ const ApplyForMembership = () => {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !captchaToken || !watchAgreedToTerms}
-                className="px-6 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ocean-teal disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || !captchaToken || !watchAgreedToTerms || !selectedCategory}
+                className="px-6 py-3 bg-club-navy text-white rounded-md hover:bg-club-navy-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-club-navy disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Submitting Application...' : 'Submit Application'}
               </button>

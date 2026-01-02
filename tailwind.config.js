@@ -10,11 +10,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Ocean theme colors (existing)
-        'ocean-navy': '#1a2332',
-        'ocean-teal': '#2d8b8b',
-        'ocean-seafoam': '#a8dadc',
-        'ocean-cream': '#f1faee',
+        // Club theme colors - Navy, Tan, White with Red highlights
+        'club-navy': '#1a365d',
+        'club-navy-dark': '#0f2440',
+        'club-tan': '#c9a96e',
+        'club-tan-light': '#e8dcc4',
+        'club-cream': '#faf8f5',
+        'club-white': '#ffffff',
+        'club-red': '#b91c1c',
+        'club-red-dark': '#991b1b',
 
         // shadcn/ui CSS variable-based colors
         border: "hsl(var(--border))",
@@ -33,6 +37,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",

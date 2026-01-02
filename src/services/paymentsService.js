@@ -193,6 +193,43 @@ export const recordPayment = async (paymentData, userId) => {
   }
 }
 
+// Record multiple payments in bulk
+// Uses individual transactions for each payment to maintain data integrity
+// Calls onProgress callback with percentage (0-100) for UI feedback
+export const recordBulkPayments = async (payments, userId, onProgress = () => {}) => {
+  const results = {
+    successful: [],
+    failed: [],
+    total: payments.length,
+  }
+
+  for (let i = 0; i < payments.length; i++) {
+    const paymentData = payments[i]
+
+    try {
+      const result = await recordPayment(paymentData, userId)
+      results.successful.push({
+        ...result,
+        memberId: paymentData.memberId,
+        memberName: paymentData.memberName,
+      })
+    } catch (error) {
+      console.error(`Failed to record payment for ${paymentData.memberName}:`, error)
+      results.failed.push({
+        memberId: paymentData.memberId,
+        memberName: paymentData.memberName,
+        error: error.message || 'Unknown error',
+      })
+    }
+
+    // Report progress
+    const progress = ((i + 1) / payments.length) * 100
+    onProgress(progress)
+  }
+
+  return results
+}
+
 // Get payment by ID
 export const getPaymentById = async (paymentId) => {
   try {

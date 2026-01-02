@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import MemberForm from '../components/MemberForm'
 import { useMember, useUpdateMember } from '@/hooks/useMember'
+import PageBreadcrumb from '../components/PageBreadcrumb'
 
 const EditMember = () => {
   const navigate = useNavigate()
@@ -44,6 +45,14 @@ const EditMember = () => {
 
   return (
     <div>
+      <PageBreadcrumb
+        items={[
+          { label: 'Members', href: '/members' },
+          { label: member.fullName, href: `/members/${id}` },
+          { label: 'Edit' }
+        ]}
+      />
+
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Edit Member</h1>
         <p className="text-gray-600 mt-2">Update {member.fullName}&apos;s information</p>

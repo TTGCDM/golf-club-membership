@@ -54,7 +54,7 @@ const Users = () => {
       case ROLES.ADMIN:
         return 'bg-orange-100 text-orange-800'
       case ROLES.EDIT:
-        return 'bg-ocean-seafoam bg-opacity-30 text-ocean-teal'
+        return 'bg-secondary/30 text-primary'
       case ROLES.VIEW:
         return 'bg-blue-100 text-blue-800'
       default:
@@ -111,7 +111,7 @@ const Users = () => {
                 <div className="flex gap-2">
                   <select
                     onChange={(e) => handleApprove(user.uid, e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     defaultValue=""
                     disabled={approveMutation.isPending}
                   >
@@ -173,7 +173,7 @@ const Users = () => {
                         <select
                           value={user.role}
                           onChange={(e) => handleChangeRole(user.uid, e.target.value)}
-                          className="px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ocean-teal"
+                          className="px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
                           disabled={updateRoleMutation.isPending}
                         >
                           <option value={ROLES.VIEW}>View</option>
@@ -192,7 +192,7 @@ const Users = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ocean-seafoam bg-opacity-30 text-ocean-teal">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-secondary/30 text-primary">
                         Active
                       </span>
                     </td>
@@ -257,7 +257,7 @@ const Users = () => {
                         {canManage && (
                           <button
                             onClick={() => handleReactivate(user.uid)}
-                            className="text-ocean-teal hover:text-ocean-navy disabled:opacity-50"
+                            className="text-primary hover:text-primary/80 disabled:opacity-50"
                             disabled={reactivateMutation.isPending}
                           >
                             Reactivate

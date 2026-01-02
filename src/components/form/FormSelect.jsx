@@ -12,10 +12,10 @@ const FormSelect = forwardRef(({
   children,
   ...props
 }, ref) => {
-  const baseClasses = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-ocean-teal focus:border-ocean-teal sm:text-sm'
+  const baseClasses = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-ring focus:border-ring sm:text-sm'
   const errorClasses = error
-    ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-    : 'border-gray-300'
+    ? 'border-destructive focus:ring-destructive focus:border-destructive'
+    : 'border-input'
 
   return (
     <select

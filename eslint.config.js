@@ -36,4 +36,11 @@ export default [
             'react/prop-types': 'off', // Disable prop-types as we might move to TS later or just not use them strictly now
         },
     },
+    // Disable react-refresh warning for shadcn/ui components (they export both components and variants)
+    {
+        files: ['src/components/ui/**/*.{js,jsx}'],
+        rules: {
+            'react-refresh/only-export-components': 'off',
+        },
+    },
 ];

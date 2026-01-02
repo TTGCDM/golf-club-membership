@@ -44,6 +44,25 @@ if [ -n "$STAGED_FROZEN" ]; then
   echo ""
 fi
 
+# === Version Consistency Check ===
+echo "Checking version consistency..."
+PACKAGE_VERSION=$(node -p "require('./package.json').version")
+PROGRESS_VERSION=$(node -p "require('./claude-progress.json').version")
+
+if [ "$PACKAGE_VERSION" != "$PROGRESS_VERSION" ]; then
+  echo ""
+  echo "❌ ERROR: Version mismatch detected!"
+  echo "   package.json:        $PACKAGE_VERSION"
+  echo "   claude-progress.json: $PROGRESS_VERSION"
+  echo ""
+  echo "Please sync versions before committing."
+  echo "Run: npm version <version> --no-git-tag-version"
+  echo "And update claude-progress.json to match."
+  echo ""
+  exit 1
+fi
+echo "✓ Versions in sync: $PACKAGE_VERSION"
+
 # === Run Linting ===
 npm run lint
 

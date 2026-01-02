@@ -355,7 +355,7 @@ const AddApplication = () => {
                 <textarea
                   id="previousClubs"
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocean-teal mt-1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary mt-1"
                   {...register('previousClubs')}
                 />
               </FormField>
@@ -368,7 +368,7 @@ const AddApplication = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-6 py-3 bg-ocean-teal text-white rounded-md hover:bg-ocean-navy disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Adding...' : 'Add Application'}
           </button>
