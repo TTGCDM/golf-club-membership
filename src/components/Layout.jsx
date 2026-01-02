@@ -39,7 +39,7 @@ const Layout = () => {
         {/* Sidebar Header */}
         <div className="p-4 border-b border-club-tan/30">
           <h1 className="text-lg font-bold text-white">Tea Tree Golf Club</h1>
-          <span className="text-xs text-club-tan opacity-75">v2.2.0</span>
+          <span className="text-xs text-club-tan opacity-75">v2.3.0</span>
         </div>
 
         {/* Navigation Links */}
