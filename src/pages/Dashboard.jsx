@@ -6,6 +6,7 @@ import { getAllMembers, calculateMemberStats } from '../services/membersService'
 import { getAllCategories } from '../services/membershipCategories'
 import { getAllPayments } from '../services/paymentsService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataFreshness } from '@/components/DataFreshness'
 
 const Dashboard = () => {
   const { checkPermission, ROLES } = useAuth()
@@ -13,21 +14,31 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // Fetch members with React Query (shared cache with Members page)
-  const { data: members = [], isLoading: membersLoading } = useQuery({
+  const {
+    data: members = [],
+    isLoading: membersLoading,
+    dataUpdatedAt: membersUpdatedAt,
+    isFetching: membersFetching,
+    refetch: refetchMembers
+  } = useQuery({
     queryKey: ['members'],
     queryFn: getAllMembers,
     staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
     cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
-    refetchOnWindowFocus: true,   // Auto-refresh when user returns to tab
   })
 
   // Fetch payments with React Query (shared cache with Payments page)
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    dataUpdatedAt: paymentsUpdatedAt,
+    isFetching: paymentsFetching,
+    refetch: refetchPayments
+  } = useQuery({
     queryKey: ['payments'],
     queryFn: getAllPayments,
     staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
     cacheTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
-    refetchOnWindowFocus: true,   // Auto-refresh when user returns to tab
   })
 
   // Fetch categories with React Query (shared cache)
@@ -37,6 +48,18 @@ const Dashboard = () => {
     staleTime: 10 * 60 * 1000,   // Categories change rarely, fresh for 10 minutes
     cacheTime: 30 * 60 * 1000,   // Keep in cache for 30 minutes
   })
+
+  // Combined refresh function
+  const handleRefreshAll = () => {
+    refetchMembers()
+    refetchPayments()
+  }
+
+  // Get earliest update time for freshness display
+  // Use the earlier of the two timestamps, or undefined if neither is available
+  const oldestUpdateTime = membersUpdatedAt && paymentsUpdatedAt
+    ? Math.min(membersUpdatedAt, paymentsUpdatedAt)
+    : membersUpdatedAt || paymentsUpdatedAt
 
   // Calculate stats from members data
   const stats = calculateMemberStats(members)
@@ -80,9 +103,17 @@ const Dashboard = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to Tea Tree Golf Club Membership Management System</p>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome to Tea Tree Golf Club Membership Management System</p>
+        </div>
+        <DataFreshness
+          dataUpdatedAt={oldestUpdateTime}
+          isFetching={membersFetching || paymentsFetching}
+          refetch={handleRefreshAll}
+          compact
+        />
       </div>
 
       {/* Key Statistics */}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useMember, memberKeys } from '@/hooks/useMember'
 import { useMemberPayments, useRecordPayment } from '@/hooks/useMemberPayments'
@@ -12,6 +13,8 @@ import { applyFeeToMember } from '../services/feeService'
 import { generateWelcomeLetter, generatePaymentReminder } from '../services/welcomeLetterService'
 import { addMemberComment, deleteMemberComment } from '../services/membersService'
 import { handleError, showSuccess } from '@/utils/errorHandler'
+import { formatTimeAgo } from '@/utils/dateUtils'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,7 +40,14 @@ const MemberDetail = () => {
   const queryClient = useQueryClient()
 
   // React Query hooks
-  const { data: member, isLoading: memberLoading, error: memberError } = useMember(id)
+  const {
+    data: member,
+    isLoading: memberLoading,
+    error: memberError,
+    dataUpdatedAt,
+    isFetching,
+    refetch: refetchMember
+  } = useMember(id)
   const { data: payments = [], isLoading: paymentsLoading } = useMemberPayments(id)
   const { data: fees = [], isLoading: feesLoading } = useMemberFees(id)
   const { data: categories = [] } = useQuery({
@@ -268,12 +278,27 @@ const MemberDetail = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{member.fullName}</h1>
-          <p className="text-gray-600 mt-1">
-            {category?.name || member.membershipCategory}
-            {member.status === 'inactive' && ' (Inactive)'}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-600">
+              {category?.name || member.membershipCategory}
+              {member.status === 'inactive' && ' (Inactive)'}
+            </p>
+            <span className="text-xs text-muted-foreground">
+              Updated {formatTimeAgo(dataUpdatedAt)}
+            </span>
+          </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchMember()}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            {isFetching ? 'Refreshing...' : 'Refresh'}
+          </Button>
           <Button onClick={handleGenerateWelcomeLetter} variant="ocean">
             Welcome Letter
           </Button>

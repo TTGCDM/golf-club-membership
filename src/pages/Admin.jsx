@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { clearAllData, getDataStats, exportAllData, downloadJSONBackup } from '../services/adminService'
 import { importMembersFromCSV } from '../services/membersService'
 import { getMembersWithOutstandingBalance, generateBulkPaymentReminders } from '../services/welcomeLetterService'
 import { handleError, showSuccess } from '@/utils/errorHandler'
+import { formatTimeAgo } from '@/utils/dateUtils'
+import { cn } from '@/lib/utils'
 import CategoryManager from '../components/CategoryManager'
 import FeeApplication from '../components/FeeApplication'
 
@@ -33,7 +36,13 @@ const Admin = () => {
   const queryClient = useQueryClient()
 
   // React Query for data stats
-  const { data: dataStats = { members: 0, payments: 0, users: 0 }, isLoading, refetch: refetchStats } = useQuery({
+  const {
+    data: dataStats = { members: 0, payments: 0, users: 0 },
+    isLoading,
+    dataUpdatedAt,
+    isFetching,
+    refetch: refetchStats
+  } = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: getDataStats,
     staleTime: 2 * 60 * 1000,
@@ -242,12 +251,19 @@ const Admin = () => {
           </div>
         )}
 
-        <button
-          onClick={() => refetchStats()}
-          className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-        >
-          Refresh Statistics
-        </button>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            Last updated: {formatTimeAgo(dataUpdatedAt)}
+          </span>
+          <button
+            onClick={() => refetchStats()}
+            disabled={isFetching}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            {isFetching ? 'Refreshing...' : 'Refresh Statistics'}
+          </button>
+        </div>
       </div>
 
       {/* Data Backup Section */}

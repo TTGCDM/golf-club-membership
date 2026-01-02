@@ -51,13 +51,15 @@ const PageLoader = () => (
 )
 
 // Configure React Query with optimized caching settings
+// Balance between data freshness and Firebase read minimization
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // Data is fresh for 5 minutes
       cacheTime: 10 * 60 * 1000, // Cache persists for 10 minutes
-      refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      refetchOnMount: false, // Don't refetch on component mount if data is fresh
+      refetchOnWindowFocus: true, // Refetch stale data when tab regains focus
+      refetchOnMount: true, // Refetch stale data on component mount
+      refetchOnReconnect: true, // Refetch when network reconnects
       retry: 1, // Only retry failed requests once
     },
   },

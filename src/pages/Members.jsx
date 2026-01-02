@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DataFreshness, StaleDataBanner } from '@/components/DataFreshness'
 
 // SortIcon component moved outside to avoid re-creation during render
 const SortIcon = ({ column, sortColumn, sortDirection }) => {
@@ -46,7 +47,13 @@ const Members = () => {
   const canEdit = checkPermission(ROLES.EDIT)
 
   // Fetch members with React Query (cached)
-  const { data: members = [], isLoading: membersLoading } = useQuery({
+  const {
+    data: members = [],
+    isLoading: membersLoading,
+    dataUpdatedAt,
+    isFetching,
+    refetch
+  } = useQuery({
     queryKey: ['members'],
     queryFn: getAllMembers,
     staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
@@ -155,10 +162,18 @@ const Members = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Members</h1>
-          <p className="text-gray-600 mt-1">
-            {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
-            {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || balanceFilter !== 'all' ? ' (filtered)' : ''}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-600">
+              {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
+              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || balanceFilter !== 'all' ? ' (filtered)' : ''}
+            </p>
+            <DataFreshness
+              dataUpdatedAt={dataUpdatedAt}
+              isFetching={isFetching}
+              refetch={refetch}
+              compact
+            />
+          </div>
         </div>
         {canEdit && (
           <Link
@@ -169,6 +184,14 @@ const Members = () => {
           </Link>
         )}
       </div>
+
+      {/* Stale Data Warning */}
+      <StaleDataBanner
+        dataUpdatedAt={dataUpdatedAt}
+        staleThreshold={10 * 60 * 1000}
+        refetch={refetch}
+        isFetching={isFetching}
+      />
 
       {/* Filters */}
       <Card className="mb-6">

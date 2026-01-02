@@ -9,6 +9,7 @@ import { recordPayment, getAllPayments, deletePayment, updatePayment, formatPaym
 import { getMemberById } from '../services/membersService'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { DataFreshness, StaleDataBanner } from '@/components/DataFreshness'
 
 const Payments = () => {
   const [showForm, setShowForm] = useState(false)
@@ -31,7 +32,12 @@ const Payments = () => {
   const [userMap, setUserMap] = useState({})
 
   // Fetch payments with React Query (cached)
-  const { data: payments = [] } = useQuery({
+  const {
+    data: payments = [],
+    dataUpdatedAt,
+    isFetching,
+    refetch
+  } = useQuery({
     queryKey: ['payments'],
     queryFn: getAllPayments,
     staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
@@ -221,7 +227,15 @@ const Payments = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-          <p className="text-gray-600 mt-1">Record and manage member payments</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-600">Record and manage member payments</p>
+            <DataFreshness
+              dataUpdatedAt={dataUpdatedAt}
+              isFetching={isFetching}
+              refetch={refetch}
+              compact
+            />
+          </div>
         </div>
         {!showForm && canEdit && (
           <div className="flex gap-2">
@@ -240,6 +254,14 @@ const Payments = () => {
           </div>
         )}
       </div>
+
+      {/* Stale Data Warning */}
+      <StaleDataBanner
+        dataUpdatedAt={dataUpdatedAt}
+        staleThreshold={10 * 60 * 1000}
+        refetch={refetch}
+        isFetching={isFetching}
+      />
 
       {/* Bulk Entry Dialog */}
       <BulkPaymentEntry

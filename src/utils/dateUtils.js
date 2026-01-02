@@ -37,3 +37,21 @@ export const formatDate = (dateString) => {
 export const getCurrentDate = () => {
   return new Date().toISOString().split('T')[0]
 }
+
+/**
+ * Format timestamp as human-readable time ago string
+ * @param {number} timestamp - Unix timestamp in milliseconds
+ * @returns {string} Human-readable time difference (e.g., "Just now", "5 minutes ago")
+ */
+export const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return 'Unknown'
+
+  const seconds = Math.floor((Date.now() - timestamp) / 1000)
+
+  if (seconds < 60) return 'Just now'
+  if (seconds < 120) return '1 minute ago'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
+  if (seconds < 7200) return '1 hour ago'
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+  return 'More than a day ago'
+}
